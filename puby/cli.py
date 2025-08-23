@@ -8,6 +8,7 @@ from colorama import init as colorama_init
 
 from .client import PublicationClient
 from .env import get_api_key
+from .legacy_sources import ZoteroLibrary
 from .matcher import PublicationMatcher
 from .models import Publication
 from .reporter import ConsoleReporter
@@ -16,7 +17,6 @@ from .sources import (
     PublicationSource,
     PureSource,
     ScholarSource,
-    ZoteroLibrary,
 )
 
 # Initialize colorama for cross-platform colored output

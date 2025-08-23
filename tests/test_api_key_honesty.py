@@ -6,7 +6,8 @@ from click.testing import CliRunner
 from pyzotero.zotero_errors import UserNotAuthorisedError
 
 from puby.cli import cli
-from puby.sources import ZoteroSource, ZoteroLibrary
+from puby.legacy_sources import ZoteroLibrary
+from puby.sources import ZoteroSource
 from puby.models import ZoteroConfig
 
 
