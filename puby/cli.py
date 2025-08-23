@@ -422,10 +422,32 @@ def fetch(orcid: Optional[str], output: str) -> None:
         sys.exit(1)
 
     client = PublicationClient()
-    source = ORCIDSource(orcid)
+    
+    # URL validation consistent with check command
+    if "orcid.org" not in orcid:
+        click.echo(f"Error: Invalid ORCID URL: {orcid}", err=True)
+        sys.exit(1)
+    
+    # Initialize source with error handling consistent with check command
+    try:
+        source = ORCIDSource(orcid)
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
 
     click.echo(f"Fetching publications from ORCID: {orcid}")
-    publications = client.fetch_publications(source)
+    
+    # Fetch publications with consistent error handling
+    try:
+        publications = client.fetch_publications(source)
+    except ValueError as e:
+        # Handle authentication and validation errors with clean messages
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        # Handle all other errors (network, parsing, etc.)
+        click.echo(f"Error fetching publications: {e}", err=True)
+        sys.exit(1)
 
     click.echo(f"Found {len(publications)} publications")
 

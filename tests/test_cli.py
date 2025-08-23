@@ -358,6 +358,200 @@ class TestCLI:
         assert "Successfully saved" in result.output
         assert "test.bib" in result.output
 
+    @patch("puby.cli.PublicationClient")
+    @patch("puby.cli.ORCIDSource")
+    def test_fetch_command_source_error(self, mock_orcid_source, mock_client):
+        """Test fetch command handles source errors with clean messages."""
+        mock_client_instance = Mock()
+        mock_client.return_value = mock_client_instance
+        # Simulate a ValueError from source (like invalid ORCID ID format after URL validation)
+        mock_client_instance.fetch_publications.side_effect = ValueError(
+            "Invalid ORCID ID format: 0000-0000-0000-000X"
+        )
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "fetch",
+                "--orcid", 
+                "https://orcid.org/0000-0000-0000-000X",  # Valid URL but invalid ID format
+                "--output",
+                "test.bib",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert "Error:" in result.output
+        assert "Invalid ORCID ID format" in result.output
+        # Should not show raw traceback
+        assert "Traceback" not in result.output
+        assert "ValueError" not in result.output
+
+    @patch("puby.cli.PublicationClient")
+    @patch("puby.cli.ORCIDSource")
+    def test_fetch_command_network_error(self, mock_orcid_source, mock_client):
+        """Test fetch command handles network errors with clean messages."""
+        import requests
+        mock_client_instance = Mock()
+        mock_client.return_value = mock_client_instance
+        # Simulate a network error
+        mock_client_instance.fetch_publications.side_effect = requests.RequestException(
+            "Connection failed"
+        )
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "fetch",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000",
+                "--output",
+                "test.bib",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert "Error fetching publications:" in result.output
+        assert "Connection failed" in result.output
+        # Should not show raw traceback
+        assert "Traceback" not in result.output
+        assert "RequestException" not in result.output
+
+    @patch("puby.cli.PublicationClient")
+    @patch("puby.cli.ORCIDSource")
+    def test_fetch_command_unexpected_error(self, mock_orcid_source, mock_client):
+        """Test fetch command handles unexpected errors with clean messages."""
+        mock_client_instance = Mock()
+        mock_client.return_value = mock_client_instance
+        # Simulate an unexpected error
+        mock_client_instance.fetch_publications.side_effect = Exception(
+            "Unexpected internal error"
+        )
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "fetch",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000",
+                "--output",
+                "test.bib",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert "Error fetching publications:" in result.output
+        assert "Unexpected internal error" in result.output
+        # Should not show raw traceback
+        assert "Traceback" not in result.output
+
+    @patch("puby.cli.PublicationClient")
+    @patch("puby.cli.ORCIDSource")
+    def test_fetch_vs_check_error_consistency(self, mock_orcid_source, mock_client):
+        """Test that fetch and check commands show consistent error message formats."""
+        runner = CliRunner()
+        
+        # Test URL validation consistency - both should show same URL validation error
+        fetch_result = runner.invoke(
+            cli,
+            [
+                "fetch",
+                "--orcid",
+                "invalid-orcid",
+                "--output",
+                "test.bib",
+            ],
+        )
+        
+        # Test check command error (mock ZoteroSource to avoid that error)
+        check_result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid",
+                "invalid-orcid",
+                "--zotero",
+                "12345",
+                "--api-key",
+                "test-key-123456789012345",
+            ],
+        )
+
+        # Both should exit with error code
+        assert fetch_result.exit_code == 1
+        assert check_result.exit_code == 1
+        
+        # Both should show identical error messages for URL validation
+        assert fetch_result.output == check_result.output
+        assert "Error: Invalid ORCID URL: invalid-orcid" in fetch_result.output
+        assert "Error: Invalid ORCID URL: invalid-orcid" in check_result.output
+        
+        # Neither should show raw tracebacks
+        assert "Traceback" not in fetch_result.output
+        assert "Traceback" not in check_result.output
+
+        # Test deeper error handling consistency with valid URLs but client errors
+        mock_client_instance = Mock()
+        mock_client.return_value = mock_client_instance
+        # Both commands should handle ValueError the same way
+        mock_client_instance.fetch_publications.side_effect = ValueError(
+            "Authentication failed"
+        )
+
+        fetch_result2 = runner.invoke(
+            cli,
+            [
+                "fetch",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000",
+                "--output",
+                "test.bib",
+            ],
+        )
+        
+        # For check command, we need to ensure it gets to the client fetch stage
+        # by providing valid arguments and mocking ZoteroSource properly
+        with patch("puby.cli.ZoteroSource") as mock_zotero:
+            mock_zotero.return_value = Mock()
+            # Mock the first call (for ORCID) to return some data,
+            # and the second call (for Zotero) to raise the error  
+            mock_client_instance.fetch_publications.side_effect = [
+                [Mock()],  # ORCID fetch succeeds
+                ValueError("Authentication failed")  # Zotero fetch fails
+            ]
+            
+            check_result2 = runner.invoke(
+                cli,
+                [
+                    "check",
+                    "--orcid",
+                    "https://orcid.org/0000-0000-0000-0000",
+                    "--zotero",
+                    "12345",
+                    "--api-key",
+                    "test-key-123456789012345",
+                ],
+            )
+
+        # Both should exit with error code for authentication errors
+        assert fetch_result2.exit_code == 1
+        assert check_result2.exit_code == 1
+        
+        # Both should show clean "Error:" prefixed messages
+        assert "Error:" in fetch_result2.output
+        assert "Error:" in check_result2.output
+        
+        # Both should contain the authentication error
+        assert "Authentication failed" in fetch_result2.output
+        assert "Authentication failed" in check_result2.output
+        
+        # Neither should show raw tracebacks
+        assert "Traceback" not in fetch_result2.output
+        assert "Traceback" not in check_result2.output
+
 
 class TestCLIZoteroSourceIntegration:
     """Test CLI integration with ZoteroSource class."""

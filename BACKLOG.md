@@ -1,12 +1,12 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #21: fix: inconsistent error handling between fetch and check commands
 - [ ] #23: fix: test suite regression - message mismatch
 - [ ] #25: refactor: sources.py exceeds size limit
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
+- [x] #21: fix: inconsistent error handling between fetch and check commands (branch: fix-21-inconsistent-error-handling)
 
 ## DONE (Completed)
 - [x] #33: feat: add BibTeX export for missing publications (PR #46)
