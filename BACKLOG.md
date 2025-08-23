@@ -3,9 +3,9 @@
 ## TODO (Ordered by Priority)
 
 ## DOING (Current Work)
-- [x] #10: feat: add Pure research portal support (branch: feat-pure-portal-10)
 
 ## DONE (Completed)
+- [x] #10: feat: add Pure research portal support (PR created)
 - [x] #9: feat: add Google Scholar profile parsing support (PR #19)
 - [x] #8: feat: integrate CLI with all components for MVP workflow (PR #18)
 - [x] #7: feat: implement report generation and output formatting (PR #17)
