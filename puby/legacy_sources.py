@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from pyzotero import zotero  # type: ignore
 
 from .models import Author, Publication
-from .sources import PublicationSource
+from .base import PublicationSource
 
 
 class ZoteroLibrary(PublicationSource):

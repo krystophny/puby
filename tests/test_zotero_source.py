@@ -12,7 +12,7 @@ from puby.sources import ZoteroSource
 class TestZoteroSource:
     """Test ZoteroSource implementation."""
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_zotero_source_creation_with_config(self, mock_zotero):
         """Test creating ZoteroSource with configuration."""
         # Mock successful connection
@@ -32,7 +32,7 @@ class TestZoteroSource:
         with pytest.raises(ValueError, match="Invalid Zotero configuration"):
             ZoteroSource(config)
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_zotero_client_initialization_group(self, mock_zotero):
         """Test Zotero client initialization for group library."""
         config = ZoteroConfig(
@@ -44,7 +44,7 @@ class TestZoteroSource:
             "12345", "group", "abcdef1234567890abcdef34"
         )
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_zotero_client_initialization_user(self, mock_zotero):
         """Test Zotero client initialization for user library."""
         config = ZoteroConfig(
@@ -54,8 +54,8 @@ class TestZoteroSource:
 
         mock_zotero.assert_called_once_with("67890", "user", "abcdef1234567890abcdef34")
 
-    @patch("puby.sources.requests.get")
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.requests.get")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_zotero_user_id_autodiscovery_success(self, mock_zotero, mock_get):
         """Test successful user ID auto-discovery from API key."""
         # Mock the /keys/current endpoint response
@@ -87,8 +87,8 @@ class TestZoteroSource:
             "123456", "user", "abcdef1234567890abcdef12"
         )
 
-    @patch("puby.sources.requests.get")
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.requests.get")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_zotero_user_id_autodiscovery_api_error(self, mock_zotero, mock_get):
         """Test user ID auto-discovery with API error."""
         # Mock failed API response
@@ -112,8 +112,8 @@ class TestZoteroSource:
         ):
             ZoteroSource(config)
 
-    @patch("puby.sources.requests.get")
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.requests.get")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_zotero_user_id_explicit_overrides_autodiscovery(
         self, mock_zotero, mock_get
     ):
@@ -134,8 +134,8 @@ class TestZoteroSource:
             "999999", "user", "abcdef1234567890abcdef12"
         )
 
-    @patch("puby.sources.requests.get")
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.requests.get")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_zotero_group_library_no_autodiscovery(self, mock_zotero, mock_get):
         """Test that group libraries don't use auto-discovery."""
         # Create config for group library
@@ -152,7 +152,7 @@ class TestZoteroSource:
             "12345", "group", "abcdef1234567890abcdef12"
         )
 
-    @patch("puby.sources.requests.get")
+    @patch("puby.zotero_source.requests.get")
     def test_zotero_user_id_autodiscovery_network_error(self, mock_get):
         """Test user ID auto-discovery with network error."""
         # Mock network error
@@ -165,7 +165,7 @@ class TestZoteroSource:
         with pytest.raises(ValueError, match="Failed to auto-discover user ID"):
             ZoteroSource(config)
 
-    @patch("puby.sources.requests.get")
+    @patch("puby.zotero_source.requests.get")
     def test_zotero_user_id_autodiscovery_invalid_response(self, mock_get):
         """Test user ID auto-discovery with invalid response format."""
         # Mock response without userID field
@@ -185,7 +185,7 @@ class TestZoteroSource:
         with pytest.raises(ValueError, match="Invalid response from Zotero API"):
             ZoteroSource(config)
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_fetch_publications_success(self, mock_zotero):
         """Test successful publication fetch."""
         # Mock Zotero API response
@@ -259,7 +259,7 @@ class TestZoteroSource:
         assert pub2.journal == "Another Journal"
         assert pub2.doi == "10.5678/test2"
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_fetch_publications_with_pagination(self, mock_zotero):
         """Test fetch with paginated results."""
         # Mock paginated response
@@ -313,7 +313,7 @@ class TestZoteroSource:
         assert len(publications) == 2
         assert mock_client.everything.called
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_fetch_publications_error_handling(self, mock_zotero):
         """Test error handling during fetch."""
         # Mock Zotero client that raises exception
@@ -331,7 +331,7 @@ class TestZoteroSource:
         with pytest.raises(ValueError, match="Failed to fetch Zotero data"):
             source.fetch()
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_parse_zotero_item_book(self, mock_zotero):
         """Test parsing book item type."""
         mock_client = Mock()
@@ -361,7 +361,7 @@ class TestZoteroSource:
         assert pub.publication_type == "book"
         assert pub.source == "Zotero"
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_parse_zotero_item_skip_non_publication(self, mock_zotero):
         """Test skipping non-publication item types."""
         mock_client = Mock()
@@ -379,7 +379,7 @@ class TestZoteroSource:
 
         assert pub is None
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_parse_zotero_item_no_title(self, mock_zotero):
         """Test parsing item with missing title."""
         mock_client = Mock()
@@ -403,7 +403,7 @@ class TestZoteroSource:
 
         assert pub is None
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_parse_zotero_item_no_authors(self, mock_zotero):
         """Test parsing item with no authors."""
         mock_client = Mock()
@@ -429,7 +429,7 @@ class TestZoteroSource:
         assert len(pub.authors) == 1
         assert pub.authors[0].name == "[No authors]"
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_parse_zotero_item_complex_date(self, mock_zotero):
         """Test parsing various date formats."""
         mock_client = Mock()
@@ -471,7 +471,7 @@ class TestZoteroSource:
             assert pub is not None
             assert pub.year == expected_year, f"Failed for date: '{date_str}'"
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_validate_connection_success(self, mock_zotero):
         """Test successful connection validation."""
         # Mock successful connection test
@@ -491,7 +491,7 @@ class TestZoteroSource:
         # (once during init, once during explicit call)
         assert mock_client.collections.call_count == 2
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_validate_connection_invalid_api_key(self, mock_zotero):
         """Test connection validation with invalid API key."""
         # Mock authentication failure only on second call
@@ -511,7 +511,7 @@ class TestZoteroSource:
         with pytest.raises(ValueError, match="Zotero authentication failed"):
             source.validate_connection()
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_validate_connection_network_error(self, mock_zotero):
         """Test connection validation with network error."""
         # Mock network failure only on second call
@@ -531,7 +531,7 @@ class TestZoteroSource:
         with pytest.raises(ValueError, match="Zotero connection failed.*Network"):
             source.validate_connection()
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_validate_connection_invalid_library(self, mock_zotero):
         """Test connection validation with invalid library ID."""
         # Mock library not found error only on second call
@@ -551,7 +551,7 @@ class TestZoteroSource:
         with pytest.raises(ValueError, match="Zotero library.*not found"):
             source.validate_connection()
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_validate_connection_on_init(self, mock_zotero):
         """Test that connection is validated on initialization."""
         # Mock successful connection
@@ -569,7 +569,7 @@ class TestZoteroSource:
         # Verify connection was validated during init
         mock_client.collections.assert_called_once()
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_init_with_connection_failure(self, mock_zotero):
         """Test initialization with connection failure."""
         # Mock connection failure during init
@@ -587,7 +587,7 @@ class TestZoteroSource:
         ):
             ZoteroSource(config)
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_fetch_with_connection_error_vs_missing(self, mock_zotero):
         """Test distinguishing between connection errors and missing publications."""
         # First test - connection error during fetch
@@ -619,7 +619,7 @@ class TestZoteroSource:
         # Should return empty list without error
         assert publications == []
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_integration_zotero_api_flow(self, mock_zotero):
         """Test complete Zotero API integration flow."""
         # Mock complete API response with realistic data
@@ -749,8 +749,8 @@ class TestZoteroSource:
 class TestZoteroMyPublicationsEndpoint:
     """Test Zotero My Publications endpoint support."""
 
-    @patch("puby.sources.requests.get")
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.requests.get")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_fetch_my_publications_success(self, mock_zotero, mock_requests_get):
         """Test successful fetch from My Publications endpoint."""
         # Mock Zotero client - needed for initialization but won't be used for My Publications
@@ -813,8 +813,8 @@ class TestZoteroMyPublicationsEndpoint:
         assert pub.doi == "10.1234/research.2023.123"
         assert pub.source == "Zotero My Publications"
 
-    @patch("puby.sources.requests.get")
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.requests.get")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_fetch_my_publications_with_pagination(
         self, mock_zotero, mock_requests_get
     ):
@@ -887,8 +887,8 @@ class TestZoteroMyPublicationsEndpoint:
         assert publications[0].title == "Publication 1"
         assert publications[99].title == "Publication 100"
 
-    @patch("puby.sources.requests.get")
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.requests.get")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_fetch_my_publications_endpoint_not_available(
         self, mock_zotero, mock_requests_get
     ):
@@ -949,8 +949,8 @@ class TestZoteroMyPublicationsEndpoint:
         assert publications[0].title == "Library Publication"
         assert publications[0].source == "Zotero"
 
-    @patch("puby.sources.requests.get")
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.requests.get")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_fetch_my_publications_bibtex_format(self, mock_zotero, mock_requests_get):
         """Test My Publications endpoint with BibTeX format."""
         # Mock Zotero client
@@ -1004,8 +1004,8 @@ class TestZoteroMyPublicationsEndpoint:
         assert pub.doi == "10.1234/research.2023.123"
         assert pub.source == "Zotero My Publications"
 
-    @patch("puby.sources.requests.get")
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.requests.get")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_fetch_my_publications_group_library_unsupported(
         self, mock_zotero, mock_requests_get
     ):
@@ -1034,8 +1034,8 @@ class TestZoteroMyPublicationsEndpoint:
         # Verify regular library method was used instead
         mock_client.everything.assert_called_once()
 
-    @patch("puby.sources.requests.get")
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.requests.get")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_fetch_my_publications_authentication_error(
         self, mock_zotero, mock_requests_get
     ):
@@ -1064,8 +1064,8 @@ class TestZoteroMyPublicationsEndpoint:
         with pytest.raises(ValueError, match="authentication failed.*API key"):
             source.fetch()
 
-    @patch("puby.sources.requests.get")
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.requests.get")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_fetch_my_publications_network_error(self, mock_zotero, mock_requests_get):
         """Test My Publications endpoint with network error."""
         # Mock Zotero client

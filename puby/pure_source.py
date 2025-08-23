@@ -1,31 +1,17 @@
 """Pure source implementation for puby."""
 
-# Import the base class (will be a circular import but Python handles it)
 import contextlib
 import logging
 import re
 import time
-from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
 
+from .base import PublicationSource
 from .models import Author, Publication
-
-
-class PublicationSource(ABC):
-    """Abstract base class for publication sources."""
-
-    @abstractmethod
-    def fetch(self) -> list:
-        """Fetch publications from the source."""
-        pass
-
-    def _get_logger(self):
-        """Get logger for this source."""
-        return logging.getLogger(self.__class__.__name__)
 
 
 class PureSource(PublicationSource):

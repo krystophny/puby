@@ -1,30 +1,16 @@
 """Google Scholar source implementation for puby."""
 
-# Import the base class (will be a circular import but Python handles it)
 import logging
 import random
 import re
 import time
-from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Union
 
 import requests
 from bs4 import BeautifulSoup, Tag
 
+from .base import PublicationSource
 from .models import Author, Publication
-
-
-class PublicationSource(ABC):
-    """Abstract base class for publication sources."""
-
-    @abstractmethod
-    def fetch(self) -> list:
-        """Fetch publications from the source."""
-        pass
-
-    def _get_logger(self):
-        """Get logger for this source."""
-        return logging.getLogger(self.__class__.__name__)
 
 
 class ScholarSource(PublicationSource):
