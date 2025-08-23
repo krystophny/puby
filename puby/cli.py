@@ -10,13 +10,14 @@ from .client import PublicationClient
 from .env import get_api_key
 from .legacy_sources import ZoteroLibrary
 from .matcher import PublicationMatcher
-from .models import Publication
+from .models import Publication, ZoteroConfig
 from .reporter import ConsoleReporter
 from .sources import (
     ORCIDSource,
     PublicationSource,
     PureSource,
     ScholarSource,
+    ZoteroSource,
 )
 
 # Initialize colorama for cross-platform colored output
@@ -71,6 +72,31 @@ def _initialize_zotero(zotero: str, api_key: Optional[str]) -> ZoteroLibrary:
         sys.exit(1)
 
 
+def _initialize_zotero_source(
+    zotero: Optional[str], library_type: str, api_key: Optional[str]
+) -> ZoteroSource:
+    """Initialize modern ZoteroSource with error handling."""
+    try:
+        # Create ZoteroConfig
+        config = ZoteroConfig(
+            api_key=api_key or "",
+            group_id=zotero,  # Can be None for user libraries (auto-discovery)
+            library_type=library_type,
+        )
+        
+        return ZoteroSource(config)
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        click.echo("\nTo fix this issue:", err=True)
+        click.echo("1. Get your Zotero API key from: https://www.zotero.org/settings/keys", err=True)
+        if library_type == "user":
+            click.echo("2. For user libraries, you can omit --zotero and let the system auto-discover your user ID", err=True)
+            click.echo("   OR provide your user ID with --zotero YOUR_USER_ID", err=True)
+        else:
+            click.echo("2. For group libraries, provide the group ID with --zotero GROUP_ID", err=True)
+        sys.exit(1)
+
+
 def _fetch_source_publications(
     client: PublicationClient, sources: List[PublicationSource], verbose: bool
 ) -> List[Publication]:
@@ -90,13 +116,15 @@ def _fetch_source_publications(
 
 
 def _fetch_zotero_publications(
-    client: PublicationClient, zotero_lib: ZoteroLibrary, verbose: bool
+    client: PublicationClient, zotero_source: ZoteroSource, verbose: bool
 ) -> List[Publication]:
-    """Fetch publications from Zotero library."""
+    """Fetch publications from Zotero library using ZoteroSource."""
     if verbose:
-        click.echo("  Fetching from Zotero library...")
+        library_type = zotero_source.config.library_type
+        library_id = zotero_source.config.group_id or "auto-discovered"
+        click.echo(f"  Fetching from Zotero {library_type} library ({library_id})...")
     try:
-        zotero_pubs = client.fetch_publications(zotero_lib)
+        zotero_pubs = client.fetch_publications(zotero_source)
         if verbose:
             click.echo(f"    Found {len(zotero_pubs)} publications")
         return zotero_pubs
@@ -193,14 +221,19 @@ def cli() -> None:
 )
 @click.option(
     "--zotero",
-    required=True,
-    help="Zotero group ID or user library ID",
+    help="Zotero group ID or user library ID (optional for user libraries with auto-discovery)",
     type=str,
 )
 @click.option(
     "--api-key",
     help="Zotero API key (required for private libraries)",
     type=str,
+)
+@click.option(
+    "--zotero-library-type",
+    type=click.Choice(["group", "user"]),
+    default="group",
+    help="Zotero library type (group or user library, defaults to group for backward compatibility)",
 )
 @click.option(
     "--format",
@@ -217,23 +250,29 @@ def check(
     scholar: Optional[str],
     orcid: Optional[str],
     pure: Optional[str],
-    zotero: str,
+    zotero: Optional[str],
     api_key: Optional[str],
+    zotero_library_type: str,
     format: str,
     verbose: bool,
 ) -> None:
     """Compare publications across sources and identify missing or duplicate entries."""
     _validate_sources(scholar, orcid, pure)
 
+    # Validate Zotero configuration
+    if zotero_library_type == "group" and not zotero:
+        click.echo("Error: --zotero is required for group library type.", err=True)
+        sys.exit(1)
+
     # Get API key with proper precedence (CLI > env > .env)
     resolved_api_key = get_api_key(api_key)
 
     client = PublicationClient(verbose=verbose)
     sources = _initialize_sources(scholar, orcid, pure)
-    zotero_lib = _initialize_zotero(zotero, resolved_api_key)
+    zotero_source = _initialize_zotero_source(zotero, zotero_library_type, resolved_api_key)
 
     all_publications = _fetch_source_publications(client, sources, verbose)
-    zotero_pubs = _fetch_zotero_publications(client, zotero_lib, verbose)
+    zotero_pubs = _fetch_zotero_publications(client, zotero_source, verbose)
 
     analysis_results = _analyze_publications(all_publications, zotero_pubs)
     _report_results(analysis_results, format)

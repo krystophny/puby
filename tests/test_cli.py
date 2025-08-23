@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 from click.testing import CliRunner
 
 from puby.cli import cli
-from puby.models import Author, Publication
+from puby.models import Author, Publication, ZoteroConfig
 
 
 class TestCLI:
@@ -40,7 +40,8 @@ class TestCLI:
         result = runner.invoke(
             cli, ["check", "--orcid", "https://orcid.org/0000-0000-0000-0000"]
         )
-        assert result.exit_code == 2  # Click's missing required option exit code
+        assert result.exit_code == 1  # Validation error exit code
+        assert "--zotero is required for group library type" in result.output
 
     def test_check_invalid_orcid_url(self):
         """Test check command with invalid ORCID URL."""
@@ -78,9 +79,9 @@ class TestCLI:
 
     @patch("puby.cli.PublicationClient")
     @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroLibrary")
+    @patch("puby.cli.ZoteroSource")
     def test_check_command_integration_success(
-        self, mock_zotero_lib, mock_orcid_source, mock_client
+        self, mock_zotero_source, mock_orcid_source, mock_client
     ):
         """Test successful end-to-end check command integration."""
         # Setup mock publications
@@ -110,6 +111,10 @@ class TestCLI:
             [mock_pub1, mock_pub2],  # ORCID publications
             [mock_pub3],  # Zotero publications (has duplicate)
         ]
+        
+        # Mock ZoteroSource instance
+        mock_zotero_instance = Mock()
+        mock_zotero_source.return_value = mock_zotero_instance
 
         runner = CliRunner()
         result = runner.invoke(
@@ -121,7 +126,7 @@ class TestCLI:
                 "--zotero",
                 "12345",
                 "--api-key",
-                "test-key",
+                "abcdef1234567890abcdef12",  # Valid 24-character API key format
                 "--verbose",
             ],
         )
@@ -137,9 +142,9 @@ class TestCLI:
 
     @patch("puby.cli.PublicationClient")
     @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroLibrary")
+    @patch("puby.cli.ZoteroSource")
     def test_check_command_with_missing_publications(
-        self, mock_zotero_lib, mock_orcid_source, mock_client
+        self, mock_zotero_source, mock_orcid_source, mock_client
     ):
         """Test check command identifies missing publications."""
         # ORCID has publications that Zotero doesn't
@@ -156,6 +161,10 @@ class TestCLI:
             [orcid_pub],  # ORCID has publication
             [],  # Zotero is empty
         ]
+        
+        # Mock ZoteroSource instance
+        mock_zotero_instance = Mock()
+        mock_zotero_source.return_value = mock_zotero_instance
 
         runner = CliRunner()
         result = runner.invoke(
@@ -174,9 +183,9 @@ class TestCLI:
 
     @patch("puby.cli.PublicationClient")
     @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroLibrary")
+    @patch("puby.cli.ZoteroSource")
     def test_check_command_different_output_formats(
-        self, mock_zotero_lib, mock_orcid_source, mock_client
+        self, mock_zotero_source, mock_orcid_source, mock_client
     ):
         """Test check command with different output formats."""
         mock_pub = Publication(
@@ -192,6 +201,10 @@ class TestCLI:
             [mock_pub],  # ORCID
             [],  # Zotero empty
         ]
+        
+        # Mock ZoteroSource instance
+        mock_zotero_instance = Mock()
+        mock_zotero_source.return_value = mock_zotero_instance
 
         # Test JSON format
         runner = CliRunner()
@@ -240,8 +253,8 @@ class TestCLI:
 
     def test_check_command_zotero_initialization_error(self):
         """Test check command handles Zotero initialization errors."""
-        with patch("puby.cli.ZoteroLibrary") as mock_zotero_lib:
-            mock_zotero_lib.side_effect = ValueError("Invalid Zotero configuration")
+        with patch("puby.cli.ZoteroSource") as mock_zotero_source:
+            mock_zotero_source.side_effect = ValueError("Invalid Zotero configuration")
 
             runner = CliRunner()
             result = runner.invoke(
@@ -260,10 +273,10 @@ class TestCLI:
 
     @patch("puby.cli.PublicationClient")
     @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroLibrary")
+    @patch("puby.cli.ZoteroSource")
     @patch("puby.cli.ScholarSource")
     def test_check_command_multiple_sources(
-        self, mock_scholar_source, mock_zotero_lib, mock_orcid_source, mock_client
+        self, mock_scholar_source, mock_zotero_source, mock_orcid_source, mock_client
     ):
         """Test check command with multiple publication sources."""
         mock_client_instance = Mock()
@@ -274,6 +287,10 @@ class TestCLI:
             [Publication(title="ORCID Pub", authors=[], year=2023)],  # ORCID
             [Publication(title="Zotero Pub", authors=[], year=2023)],  # Zotero
         ]
+        
+        # Mock ZoteroSource instance
+        mock_zotero_instance = Mock()
+        mock_zotero_source.return_value = mock_zotero_instance
 
         runner = CliRunner()
         result = runner.invoke(
@@ -340,3 +357,267 @@ class TestCLI:
         assert "Found 1 publications" in result.output
         assert "Successfully saved" in result.output
         assert "test.bib" in result.output
+
+
+class TestCLIZoteroSourceIntegration:
+    """Test CLI integration with ZoteroSource class."""
+
+    @patch("puby.cli.PublicationClient")
+    @patch("puby.cli.ORCIDSource")
+    @patch("puby.cli.ZoteroSource")
+    def test_check_command_with_zotero_source_group_library(
+        self, mock_zotero_source, mock_orcid_source, mock_client
+    ):
+        """Test check command using ZoteroSource for group library."""
+        # Setup mock publications
+        mock_pub = Publication(
+            title="Test Paper",
+            authors=[Author(name="John Doe")],
+            year=2023,
+            doi="10.1000/test",
+        )
+
+        mock_client_instance = Mock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.fetch_publications.side_effect = [
+            [mock_pub],  # ORCID publications
+            [mock_pub],  # Zotero publications
+        ]
+
+        # Mock ZoteroSource initialization
+        mock_zotero_instance = Mock()
+        mock_zotero_source.return_value = mock_zotero_instance
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000",
+                "--zotero",
+                "12345",
+                "--zotero-library-type",
+                "group",
+                "--api-key",
+                "abcdef1234567890abcdef12",
+            ],
+        )
+
+        assert result.exit_code == 0
+        # Verify ZoteroSource was initialized with correct config
+        mock_zotero_source.assert_called_once()
+        config_arg = mock_zotero_source.call_args[0][0]
+        assert isinstance(config_arg, ZoteroConfig)
+        assert config_arg.api_key == "abcdef1234567890abcdef12"
+        assert config_arg.group_id == "12345"
+        assert config_arg.library_type == "group"
+
+    @patch("puby.cli.PublicationClient")
+    @patch("puby.cli.ORCIDSource")
+    @patch("puby.cli.ZoteroSource")
+    def test_check_command_with_zotero_source_user_library(
+        self, mock_zotero_source, mock_orcid_source, mock_client
+    ):
+        """Test check command using ZoteroSource for user library."""
+        mock_pub = Publication(
+            title="Test Paper",
+            authors=[Author(name="John Doe")],
+            year=2023,
+        )
+
+        mock_client_instance = Mock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.fetch_publications.side_effect = [
+            [mock_pub],  # ORCID
+            [mock_pub],  # Zotero
+        ]
+
+        mock_zotero_instance = Mock()
+        mock_zotero_source.return_value = mock_zotero_instance
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000",
+                "--zotero",
+                "user-id-123",
+                "--zotero-library-type",
+                "user",
+                "--api-key",
+                "abcdef1234567890abcdef12",
+            ],
+        )
+
+        assert result.exit_code == 0
+        # Verify ZoteroSource was initialized with user library config
+        mock_zotero_source.assert_called_once()
+        config_arg = mock_zotero_source.call_args[0][0]
+        assert config_arg.library_type == "user"
+        assert config_arg.group_id == "user-id-123"
+
+    @patch("puby.cli.PublicationClient")
+    @patch("puby.cli.ORCIDSource")
+    @patch("puby.cli.ZoteroSource")
+    def test_check_command_zotero_source_auto_user_id_discovery(
+        self, mock_zotero_source, mock_orcid_source, mock_client
+    ):
+        """Test check command with ZoteroSource auto-discovering user ID."""
+        mock_pub = Publication(
+            title="Test Paper",
+            authors=[Author(name="John Doe")],
+            year=2023,
+        )
+
+        mock_client_instance = Mock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.fetch_publications.side_effect = [
+            [mock_pub],  # ORCID
+            [mock_pub],  # Zotero
+        ]
+
+        mock_zotero_instance = Mock()
+        mock_zotero_source.return_value = mock_zotero_instance
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000",
+                "--zotero-library-type",
+                "user",
+                "--api-key",
+                "abcdef1234567890abcdef12",
+            ],
+        )
+
+        assert result.exit_code == 0
+        # Verify ZoteroSource was initialized without explicit user ID
+        # (will be auto-discovered)
+        mock_zotero_source.assert_called_once()
+        config_arg = mock_zotero_source.call_args[0][0]
+        assert config_arg.library_type == "user"
+        assert config_arg.group_id is None  # Will be auto-discovered
+
+    @patch("puby.cli.ZoteroSource")
+    def test_check_command_zotero_source_invalid_config(self, mock_zotero_source):
+        """Test check command handles invalid ZoteroSource configuration."""
+        # Mock ZoteroSource to raise ValueError for invalid config
+        mock_zotero_source.side_effect = ValueError(
+            "Invalid Zotero configuration: API key is required"
+        )
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000",
+                "--zotero",
+                "12345",
+                "--zotero-library-type",
+                "group",
+                # No API key provided
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert "Invalid Zotero configuration" in result.output
+
+    @patch("puby.cli.PublicationClient")
+    @patch("puby.cli.ORCIDSource")
+    @patch("puby.cli.ZoteroSource")
+    def test_check_command_zotero_source_authentication_error(
+        self, mock_zotero_source, mock_orcid_source, mock_client
+    ):
+        """Test check command handles ZoteroSource authentication errors."""
+        mock_client_instance = Mock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.fetch_publications.side_effect = [
+            [Publication(title="Test", authors=[], year=2023)],  # ORCID success
+            # Zotero fetch will fail via exception in source
+        ]
+
+        # Mock ZoteroSource instance that works for init but fails on fetch
+        mock_zotero_instance = Mock()
+        mock_zotero_source.return_value = mock_zotero_instance
+
+        # Mock fetch_publications to handle the ZoteroSource properly
+        def mock_fetch_side_effect(source):
+            if isinstance(source, type(mock_zotero_instance)):
+                raise ValueError(
+                    "Zotero API authentication failed. Please provide a valid API key."
+                )
+            return [Publication(title="Test", authors=[], year=2023)]
+
+        mock_client_instance.fetch_publications.side_effect = mock_fetch_side_effect
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000",
+                "--zotero",
+                "12345",
+                "--api-key",
+                "invalidkey123456789012345",  # Valid format but invalid key
+            ],
+        )
+
+        # Should show proper error handling
+        assert result.exit_code == 1
+        assert "Zotero API authentication failed" in result.output
+
+    @patch("puby.cli.PublicationClient")
+    @patch("puby.cli.ORCIDSource")
+    @patch("puby.cli.ZoteroSource")
+    def test_check_command_zotero_source_backward_compatibility(
+        self, mock_zotero_source, mock_orcid_source, mock_client
+    ):
+        """Test that ZoteroSource integration maintains backward compatibility."""
+        # This test ensures existing CLI commands still work
+        mock_pub = Publication(
+            title="Test Paper",
+            authors=[Author(name="John Doe")],
+            year=2023,
+        )
+
+        mock_client_instance = Mock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.fetch_publications.side_effect = [
+            [mock_pub],  # ORCID
+            [mock_pub],  # Zotero
+        ]
+
+        mock_zotero_instance = Mock()
+        mock_zotero_source.return_value = mock_zotero_instance
+
+        runner = CliRunner()
+        # Use old-style command without new options
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000",
+                "--zotero",
+                "12345",
+                "--api-key",
+                "abcdef1234567890abcdef12",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "Summary:" in result.output
+        # Should default to group library type for backward compatibility
+        mock_zotero_source.assert_called_once()
+        config_arg = mock_zotero_source.call_args[0][0]
+        assert config_arg.library_type == "group"  # Default for backward compatibility

@@ -154,9 +154,9 @@ class TestZoteroConfig:
     def test_zotero_config_creation(self):
         """Test creating Zotero configuration."""
         config = ZoteroConfig(
-            api_key="test_api_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef12", group_id="12345", library_type="group"
         )
-        assert config.api_key == "test_api_key"
+        assert config.api_key == "abcdef1234567890abcdef12"
         assert config.group_id == "12345"
         assert config.library_type == "group"
 
@@ -178,7 +178,7 @@ class TestZoteroConfig:
     def test_zotero_config_validation_invalid_library_type(self):
         """Test invalid library type validation."""
         config = ZoteroConfig(
-            api_key="valid_key", group_id="12345", library_type="invalid"
+            api_key="validkey123456789abcdef01", group_id="12345", library_type="invalid"
         )
         assert not config.is_valid()
         errors = config.validation_errors()
