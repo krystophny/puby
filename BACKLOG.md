@@ -3,9 +3,9 @@
 ## TODO (Ordered by Priority)
 
 ## DOING (Current Work)
-- [x] #27: consider: extract common HTTP utilities (analysis in progress)
 
 ## DONE (Completed)
+- [x] #27: consider: extract common HTTP utilities (closed - analysis complete)
 - [x] #25: refactor: sources.py exceeds size limit (PR #49)
 - [x] #23: fix: test suite regression - message mismatch (PR #48)
 - [x] #21: fix: inconsistent error handling between fetch and check commands (PR #47)
