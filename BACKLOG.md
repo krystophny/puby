@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #5: feat: implement basic Zotero API client
 - [ ] #6: feat: implement publication matching and comparison
 - [ ] #7: feat: implement report generation and output formatting
 - [ ] #8: feat: integrate CLI with all components for MVP workflow
@@ -9,6 +8,7 @@
 - [ ] #10: feat: add Pure research portal support
 
 ## DOING (Current Work)
+- [ ] #5: feat: implement basic Zotero API client (branch: feat-zotero-api-client-5)
 
 ## DONE (Completed)
 - [x] #4: feat: implement ORCID API parser (PR #14)
