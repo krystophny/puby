@@ -5,9 +5,9 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
-- [x] #23: fix: test suite regression - message mismatch (branch: fix-23-test-suite-regression-message-mismatch)
 
 ## DONE (Completed)
+- [x] #23: fix: test suite regression - message mismatch (PR #48)
 - [x] #21: fix: inconsistent error handling between fetch and check commands (PR #47)
 - [x] #33: feat: add BibTeX export for missing publications (PR #46)
 - [x] #32: feat: add fuzzy title matching with configurable threshold (PR #45)
