@@ -11,12 +11,12 @@ from .env import get_api_key
 from .matcher import PublicationMatcher
 from .models import Publication
 from .reporter import ConsoleReporter
+from .legacy_sources import ZoteroLibrary
 from .sources import (
     ORCIDSource,
     PublicationSource,
     PureSource,
     ScholarSource,
-    ZoteroLibrary,
 )
 
 # Initialize colorama for cross-platform colored output
