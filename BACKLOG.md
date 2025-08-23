@@ -11,9 +11,9 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
-- [x] #26: fix: ZoteroSource class not integrated into CLI (branch: fix-26-zotero-source-cli-integration)
 
 ## DONE (Completed)
+- [x] #26: fix: ZoteroSource class not integrated into CLI (PR #40)
 - [x] #24: fix: no API key validation (PR #39)
 - [x] #22: fix: Zotero connection validation missing (PR #38)
 - [x] #28: feat: add Zotero user ID auto-discovery from API key (PR #37)
