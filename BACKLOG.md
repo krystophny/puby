@@ -10,9 +10,9 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
-- [x] #29: feat: add Zotero My Publications endpoint support (branch: feat-29-zotero-my-publications-endpoint)
 
 ## DONE (Completed)
+- [x] #29: feat: add Zotero My Publications endpoint support (PR #41)
 - [x] #26: fix: ZoteroSource class not integrated into CLI (PR #40)
 - [x] #24: fix: no API key validation (PR #39)
 - [x] #22: fix: Zotero connection validation missing (PR #38)
