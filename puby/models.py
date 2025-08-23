@@ -189,9 +189,15 @@ class ZoteroConfig:
         """Get list of validation errors."""
         errors = []
 
-        if not self.api_key or not self.api_key.strip():
+        if self.api_key is None or not self.api_key or not self.api_key.strip():
             errors.append(
                 "API key is required for Zotero access. "
+                "Get your API key at: https://www.zotero.org/settings/keys"
+            )
+        elif not self._is_valid_api_key_format(self.api_key):
+            errors.append(
+                "Invalid API key format. Zotero API keys must be exactly 24 "
+                "alphanumeric characters (letters and numbers only). "
                 "Get your API key at: https://www.zotero.org/settings/keys"
             )
 
@@ -205,6 +211,33 @@ class ZoteroConfig:
         # No validation error for missing user ID
 
         return errors
+
+    @staticmethod
+    def _is_valid_api_key_format(api_key: str) -> bool:
+        """Validate Zotero API key format.
+        
+        Zotero API keys are exactly 24 characters long and contain only
+        ASCII alphanumeric characters (letters and numbers, no special characters).
+        
+        Args:
+            api_key: The API key to validate
+            
+        Returns:
+            bool: True if the format is valid, False otherwise
+        """
+        if not api_key:
+            return False
+            
+        # Must be exactly 24 characters
+        if len(api_key) != 24:
+            return False
+            
+        # Must contain only ASCII alphanumeric characters (letters and numbers)
+        # Using all() with individual character checks for more precise control
+        if not all(c.isascii() and c.isalnum() for c in api_key):
+            return False
+            
+        return True
 
 
 @dataclass

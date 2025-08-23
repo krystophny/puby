@@ -30,7 +30,7 @@ class TestZoteroAPIKeyHonesty:
         assert any("API key is required" in error for error in errors)
 
         # Valid API key
-        config = ZoteroConfig(api_key="valid_key_123", group_id="123456")
+        config = ZoteroConfig(api_key="P9NiFoyLeZu2bZNvvuQPDWsd", group_id="123456")
         assert config.is_valid()
 
     @patch('puby.sources.requests.get')
@@ -42,8 +42,8 @@ class TestZoteroAPIKeyHonesty:
         with pytest.raises(ValueError, match="Invalid Zotero configuration.*API key is required"):
             ZoteroSource(invalid_config)
 
-        # Test auto-discovery failure with invalid API key
-        invalid_config = ZoteroConfig(api_key="invalid_key", library_type="user")
+        # Test auto-discovery failure with valid format but non-working key
+        invalid_config = ZoteroConfig(api_key="P9NiFoyLeZu2bZNvvuQPDWs1", library_type="user")
         
         # Mock failed auto-discovery
         mock_response = Mock()
@@ -73,7 +73,7 @@ class TestZoteroAPIKeyHonesty:
         # Simulate unauthorized error
         mock_zotero.everything.side_effect = UserNotAuthorisedError("Invalid API key")
         
-        config = ZoteroConfig(api_key="invalid_key", group_id="123456")
+        config = ZoteroConfig(api_key="P9NiFoyLeZu2bZNvvuQPDWs2", group_id="123456")
         source = ZoteroSource(config)
         
         # Should raise a clear error instead of returning empty list

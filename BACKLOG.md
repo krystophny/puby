@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #24: fix: no API key validation
 - [ ] #26: fix: ZoteroSource class not integrated into CLI
 - [ ] #29: feat: add Zotero My Publications endpoint support
 - [ ] #31: feat: add standardized citation key generation
@@ -15,6 +14,7 @@
 ## DOING (Current Work)
 
 ## DONE (Completed)
+- [x] #24: fix: no API key validation (PR #39)
 - [x] #22: fix: Zotero connection validation missing (PR #38)
 - [x] #28: feat: add Zotero user ID auto-discovery from API key (PR #37)
 - [x] #30: feat: add .env file support for API keys (PR #36)
