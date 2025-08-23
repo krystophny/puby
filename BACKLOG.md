@@ -1,6 +1,13 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
+- [ ] #22: fix: Zotero connection validation missing
+- [ ] #21: fix: inconsistent error handling between fetch and check commands
+- [ ] #23: fix: test suite regression - message mismatch
+- [ ] #24: fix: no API key validation
+- [ ] #25: refactor: sources.py exceeds size limit
+- [ ] #26: fix: ZoteroSource class not integrated into CLI
+- [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
 
