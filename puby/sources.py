@@ -751,6 +751,10 @@ class ZoteroSource(PublicationSource):
             self.zot = zotero.Zotero(
                 library_id, self.config.library_type, self.config.api_key
             )
+            
+            # Validate connection during initialization
+            self.validate_connection()
+            
         except Exception as e:
             # Provide helpful guidance for common authentication issues
             error_msg = str(e).lower()
@@ -762,6 +766,39 @@ class ZoteroSource(PublicationSource):
                 ) from e
             else:
                 raise ValueError(f"Failed to initialize Zotero client: {e}") from e
+
+    def validate_connection(self) -> None:
+        """Validate the connection to Zotero API.
+        
+        Raises:
+            ValueError: If connection validation fails with specific error message.
+        """
+        try:
+            # Test connection by fetching collections (lightweight operation)
+            self.zot.collections()
+            self.logger.info("Zotero connection validated successfully")
+        except Exception as e:
+            error_msg = str(e).lower()
+            
+            if any(term in error_msg for term in ["403", "forbidden", "unauthorized", "auth"]):
+                raise ValueError(
+                    f"Zotero authentication failed: Invalid API key or insufficient permissions. "
+                    f"Please check your API key at: https://www.zotero.org/settings/keys"
+                ) from e
+            elif any(term in error_msg for term in ["404", "not found"]):
+                raise ValueError(
+                    f"Zotero library not found: The specified library ID '{self.config.group_id}' "
+                    f"does not exist or you don't have access to it."
+                ) from e
+            elif any(term in error_msg for term in ["network", "connection", "timeout", "unreachable"]):
+                raise ValueError(
+                    f"Zotero connection failed: Network error. "
+                    f"Please check your internet connection and try again."
+                ) from e
+            else:
+                raise ValueError(
+                    f"Zotero connection validation failed: {e}"
+                ) from e
 
     def _autodiscover_user_id(self, api_key: str) -> str:
         """Auto-discover user ID from API key using Zotero API."""
@@ -828,6 +865,7 @@ class ZoteroSource(PublicationSource):
         except Exception as e:
             # Provide clear feedback for authentication issues
             error_msg = str(e).lower()
+            
             if any(term in error_msg for term in ['auth', 'unauthorized', 'forbidden', 'api key', 'credentials']):
                 self.logger.error(
                     f"Zotero authentication failed: {e}. "
@@ -837,6 +875,12 @@ class ZoteroSource(PublicationSource):
                 raise ValueError(
                     f"Zotero API authentication failed. Please provide a valid API key. "
                     f"Get your API key at: https://www.zotero.org/settings/keys"
+                ) from e
+            elif any(term in error_msg for term in ["network", "connection", "timeout", "unreachable"]):
+                self.logger.error(f"Zotero network connection failed: {e}")
+                raise ValueError(
+                    f"Zotero connection failed: Network error. "
+                    f"Please check your internet connection and try again."
                 ) from e
             else:
                 self.logger.error(f"Error fetching Zotero data: {e}")
