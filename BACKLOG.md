@@ -12,6 +12,7 @@
 ## DOING (Current Work)
 
 ## DONE (Completed)
+- [x] #42: fix: test suite failures after PR #41 source refactoring (PR #43)
 - [x] #29: feat: add Zotero My Publications endpoint support (PR #41)
 - [x] #26: fix: ZoteroSource class not integrated into CLI (PR #40)
 - [x] #24: fix: no API key validation (PR #39)

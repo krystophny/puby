@@ -119,7 +119,7 @@ class TestEnvSupport:
                 os.chdir(original_cwd)
 
     @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ZoteroLibrary")
+    @patch("puby.cli._initialize_zotero_source")
     def test_cli_uses_env_file_for_zotero(self, mock_zotero, mock_client):
         """Test that CLI loads API key from .env file."""
         runner = CliRunner()
@@ -131,9 +131,9 @@ class TestEnvSupport:
                 # Create .env file
                 Path(".env").write_text("ZOTERO_API_KEY=abcdef1234567890abcdef78\n")
                 
-                # Mock Zotero to check API key
+                # Mock Zotero source
                 mock_zotero_instance = Mock()
-                mock_zotero_instance.publications = []
+                mock_zotero_instance.fetch.return_value = []
                 mock_zotero.return_value = mock_zotero_instance
                 
                 # Mock client
@@ -153,15 +153,19 @@ class TestEnvSupport:
                     catch_exceptions=False
                 )
                 
-                # Should have called ZoteroLibrary with API key from .env
-                mock_zotero.assert_called_with("12345", api_key="abcdef1234567890abcdef78")
+                # Should have called _initialize_zotero_source with API key from .env
+                # Check that it was called with the right parameters
+                assert mock_zotero.called
+                call_args = mock_zotero.call_args
+                assert call_args[0][0] == "12345"  # zotero param
+                assert call_args[0][2] == "abcdef1234567890abcdef78"  # api_key param
         finally:
             # Restore original environment
             if original_env is not None:
                 os.environ["ZOTERO_API_KEY"] = original_env
 
     @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ZoteroLibrary")
+    @patch("puby.cli._initialize_zotero_source")
     def test_cli_command_line_overrides_env(self, mock_zotero, mock_client):
         """Test that CLI command line --api-key overrides .env file."""
         runner = CliRunner()
@@ -170,8 +174,9 @@ class TestEnvSupport:
             # Create .env file
             Path(".env").write_text("ZOTERO_API_KEY=env1234567890abcdef1234\n")
             
-            # Mock Zotero to check API key
+            # Mock Zotero source
             mock_zotero_instance = Mock()
+            mock_zotero_instance.fetch.return_value = []
             mock_zotero.return_value = mock_zotero_instance
             
             # Mock client
@@ -191,8 +196,12 @@ class TestEnvSupport:
                 catch_exceptions=False
             )
             
-            # Should have called ZoteroLibrary with CLI API key
-            mock_zotero.assert_called_with("12345", api_key="abcdef1234567890abcdef90")
+            # Should have called _initialize_zotero_source with CLI API key
+            # Check that it was called with the right parameters
+            assert mock_zotero.called
+            call_args = mock_zotero.call_args
+            assert call_args[0][0] == "12345"  # zotero param
+            assert call_args[0][2] == "abcdef1234567890abcdef90"  # api_key param
 
     def test_env_file_with_multiple_variables(self):
         """Test loading .env file with multiple variables."""

@@ -15,19 +15,19 @@ class TestScholarSource:
         """Test Scholar ID extraction from various URL formats."""
         # Standard profile URL
         source = ScholarSource("https://scholar.google.com/citations?user=ABC123&hl=en")
-        assert source.scholar_user_id == "ABC123"
+        assert source.user_id == "ABC123"
 
         # Profile URL with different parameters
         source = ScholarSource("https://scholar.google.com/citations?hl=en&user=XYZ789")
-        assert source.scholar_user_id == "XYZ789"
+        assert source.user_id == "XYZ789"
 
         # Minimal profile URL
         source = ScholarSource("https://scholar.google.com/citations?user=TEST456")
-        assert source.scholar_user_id == "TEST456"
+        assert source.user_id == "TEST456"
 
         # Direct user ID
         source = ScholarSource("DEF789")
-        assert source.scholar_user_id == "DEF789"
+        assert source.user_id == "DEF789"
 
     def test_extract_scholar_id_invalid_format(self):
         """Test Scholar ID extraction with invalid formats."""
