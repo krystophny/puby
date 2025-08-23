@@ -16,9 +16,9 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
-- [ ] #34: bug: be honest about missing API keys - never fake functionality
 
 ## DONE (Completed)
+- [x] #34: bug: be honest about missing API keys - never fake functionality (PR #35)
 - [x] #10: feat: add Pure research portal support (PR #20 merged)
 - [x] #9: feat: add Google Scholar profile parsing support (PR #19)
 - [x] #8: feat: integrate CLI with all components for MVP workflow (PR #18)
