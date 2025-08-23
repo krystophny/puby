@@ -1,6 +1,8 @@
 """Data models for publications."""
 
 import re
+import string
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Dict, List, Optional
@@ -71,11 +73,8 @@ class Publication:
 
     def to_bibtex(self) -> str:
         """Convert publication to BibTeX format."""
-        # Generate a cite key
-        first_author = self.authors[0].family_name if self.authors else "Unknown"
-        year_str = str(self.year) if self.year else "NoYear"
-        title_word = self.title.split()[0] if self.title else "NoTitle"
-        cite_key = f"{first_author}{year_str}{title_word}"
+        # Generate standardized citation key
+        cite_key = self.generate_citation_key()
 
         # Build BibTeX entry
         lines = [f"@article{{{cite_key},"]
@@ -109,6 +108,130 @@ class Publication:
         lines.append("}")
 
         return "\n".join(lines)
+
+    def extract_first_author_surname(self) -> str:
+        """Extract surname from first author for citation key generation."""
+        if not self.authors:
+            return "Unknown"
+        
+        author = self.authors[0]
+        
+        # Use family_name if available
+        if author.family_name and author.family_name.strip():
+            surname = author.family_name.strip()
+        else:
+            # Parse from name field
+            surname = self._parse_surname_from_name(author.name)
+        
+        # Clean special characters and normalize
+        return self._clean_surname_for_citation(surname)
+    
+    def _parse_surname_from_name(self, name: str) -> str:
+        """Parse surname from various name formats."""
+        if not name or not name.strip():
+            return "Unknown"
+        
+        name = name.strip()
+        
+        # Format: "Lastname, Firstname"
+        if "," in name:
+            parts = name.split(",", 1)
+            return parts[0].strip()
+        
+        # Format: "Firstname Lastname" or "Firstname Middle Lastname"
+        # Take the last word as surname
+        words = name.split()
+        if words:
+            return words[-1]
+        
+        return "Unknown"
+    
+    def _clean_surname_for_citation(self, surname: str) -> str:
+        """Clean surname for citation key (remove accents, special chars)."""
+        if not surname:
+            return "Unknown"
+        
+        # Normalize unicode (decompose accents)
+        surname = unicodedata.normalize('NFD', surname)
+        
+        # Remove combining characters (accents)
+        surname = ''.join(c for c in surname if unicodedata.category(c) != 'Mn')
+        
+        # Replace non-ASCII letters and keep hyphens
+        cleaned = ''
+        for char in surname:
+            if char.isascii() and (char.isalpha() or char == '-'):
+                cleaned += char
+            elif not char.isascii() and char.isalpha():
+                # Try basic transliteration for common cases
+                cleaned += self._transliterate_char(char)
+        
+        # Remove multiple consecutive hyphens and strip
+        cleaned = re.sub(r'-+', '-', cleaned).strip('-')
+        
+        return cleaned if cleaned else "Unknown"
+    
+    def _transliterate_char(self, char: str) -> str:
+        """Basic transliteration for non-ASCII characters."""
+        # Simple mapping for common cases
+        transliteration_map = {
+            'ñ': 'n', 'ç': 'c', 'ß': 'ss',
+            'æ': 'ae', 'ø': 'o', 'å': 'a',
+            'ł': 'l', 'ż': 'z', 'ź': 'z', 'ś': 's',
+        }
+        return transliteration_map.get(char.lower(), char)
+    
+    def generate_citation_key(self) -> str:
+        """Generate standardized citation key in AuthorYear-Page format."""
+        surname = self.extract_first_author_surname()
+        
+        # Add year or "NoYear"
+        year_str = str(self.year) if self.year else "NoYear"
+        
+        # Extract first page number if available
+        page_part = ""
+        if self.pages:
+            page_part = self._extract_first_page(self.pages)
+            if page_part:
+                page_part = f"-{page_part}"
+        
+        return f"{surname}{year_str}{page_part}"
+    
+    def _extract_first_page(self, pages: str) -> str:
+        """Extract first page number from pages string."""
+        if not pages:
+            return ""
+        
+        # Handle various page formats: "123-130", "123--130", "e12345", etc.
+        pages = pages.strip()
+        
+        # Split on common separators
+        for separator in ['-', '–', '—', ' to ', ' TO ']:
+            if separator in pages:
+                first_part = pages.split(separator)[0].strip()
+                if first_part:
+                    return first_part
+                break
+        
+        # Return the whole string if no separators found
+        return pages
+    
+    def resolve_key_conflicts(self, existing_keys: List[str]) -> str:
+        """Resolve citation key conflicts by adding letter suffixes."""
+        base_key = self.generate_citation_key()
+        
+        if base_key not in existing_keys:
+            return base_key
+        
+        # Try adding letter suffixes: a, b, c, ...
+        for letter in string.ascii_lowercase:
+            candidate_key = f"{base_key}{letter}"
+            if candidate_key not in existing_keys:
+                return candidate_key
+        
+        # If we've exhausted single letters, something is very wrong
+        # but return a fallback (this should never happen in practice)
+        return f"{base_key}z"
 
     def matches(self, other: "Publication", threshold: float = 0.8) -> bool:
         """Check if this publication matches another based on similarity."""

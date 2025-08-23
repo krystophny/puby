@@ -83,7 +83,7 @@ class TestPublication:
             doi="10.1234/test",
         )
         bibtex = pub.to_bibtex()
-        assert "@article{Doe2023Test," in bibtex
+        assert "@article{Doe2023-100," in bibtex
         assert 'title = "{Test Publication}"' in bibtex
         assert 'author = "{Doe, John and Smith, Jane}"' in bibtex
         assert 'year = "{2023}"' in bibtex
@@ -306,3 +306,158 @@ class TestAuthorValidation:
         assert not author.is_valid()
         errors = author.validation_errors()
         assert "ORCID ID format is invalid" in errors
+
+
+class TestCitationKeyGeneration:
+    """Test citation key generation functionality."""
+
+    def test_extract_first_author_surname_family_name(self):
+        """Test extracting surname when family_name is available."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="John Doe", family_name="Doe", given_name="John")],
+        )
+        assert pub.extract_first_author_surname() == "Doe"
+
+    def test_extract_first_author_surname_name_parsing_lastname_first(self):
+        """Test extracting surname from 'Lastname, Firstname' format."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="Smith, John")],
+        )
+        assert pub.extract_first_author_surname() == "Smith"
+
+    def test_extract_first_author_surname_name_parsing_firstname_last(self):
+        """Test extracting surname from 'Firstname Lastname' format."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="John Smith")],
+        )
+        assert pub.extract_first_author_surname() == "Smith"
+
+    def test_extract_first_author_surname_multiple_names(self):
+        """Test extracting surname from complex names."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="John van der Smith")],
+        )
+        assert pub.extract_first_author_surname() == "Smith"
+
+    def test_extract_first_author_surname_special_characters(self):
+        """Test extracting surname with special characters."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="José María García-López")],
+        )
+        assert pub.extract_first_author_surname() == "Garcia-Lopez"
+
+    def test_extract_first_author_surname_no_authors(self):
+        """Test extracting surname when no authors."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[],
+        )
+        assert pub.extract_first_author_surname() == "Unknown"
+
+    def test_generate_citation_key_basic(self):
+        """Test basic citation key generation."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="John Smith", family_name="Smith")],
+            year=2023,
+            pages="123-130",
+        )
+        assert pub.generate_citation_key() == "Smith2023-123"
+
+    def test_generate_citation_key_no_pages(self):
+        """Test citation key generation without pages."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="John Smith", family_name="Smith")],
+            year=2023,
+        )
+        assert pub.generate_citation_key() == "Smith2023"
+
+    def test_generate_citation_key_no_year(self):
+        """Test citation key generation without year."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="John Smith", family_name="Smith")],
+            pages="123-130",
+        )
+        assert pub.generate_citation_key() == "SmithNoYear-123"
+
+    def test_generate_citation_key_no_year_no_pages(self):
+        """Test citation key generation without year or pages."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="John Smith", family_name="Smith")],
+        )
+        assert pub.generate_citation_key() == "SmithNoYear"
+
+    def test_generate_citation_key_complex_pages(self):
+        """Test citation key generation with complex page formats."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="John Smith", family_name="Smith")],
+            year=2023,
+            pages="e12345",
+        )
+        assert pub.generate_citation_key() == "Smith2023-e12345"
+
+    def test_generate_citation_key_range_pages(self):
+        """Test citation key generation with page ranges."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="John Smith", family_name="Smith")],
+            year=2023,
+            pages="123--130",
+        )
+        assert pub.generate_citation_key() == "Smith2023-123"
+
+    def test_resolve_key_conflicts_no_conflict(self):
+        """Test conflict resolution with no existing conflicts."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="John Smith", family_name="Smith")],
+            year=2023,
+            pages="123",
+        )
+        existing_keys = ["Other2023-456", "Different2024-123"]
+        key = pub.resolve_key_conflicts(existing_keys)
+        assert key == "Smith2023-123"
+
+    def test_resolve_key_conflicts_single_conflict(self):
+        """Test conflict resolution with one existing conflict."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="John Smith", family_name="Smith")],
+            year=2023,
+            pages="123",
+        )
+        existing_keys = ["Smith2023-123", "Other2023-456"]
+        key = pub.resolve_key_conflicts(existing_keys)
+        assert key == "Smith2023-123a"
+
+    def test_resolve_key_conflicts_multiple_conflicts(self):
+        """Test conflict resolution with multiple existing conflicts."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="John Smith", family_name="Smith")],
+            year=2023,
+            pages="123",
+        )
+        existing_keys = ["Smith2023-123", "Smith2023-123a", "Smith2023-123b"]
+        key = pub.resolve_key_conflicts(existing_keys)
+        assert key == "Smith2023-123c"
+
+    def test_resolve_key_conflicts_no_pages(self):
+        """Test conflict resolution without pages."""
+        pub = Publication(
+            title="Test Publication",
+            authors=[Author(name="John Smith", family_name="Smith")],
+            year=2023,
+        )
+        existing_keys = ["Smith2023", "Smith2023a"]
+        key = pub.resolve_key_conflicts(existing_keys)
+        assert key == "Smith2023b"
