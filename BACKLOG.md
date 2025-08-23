@@ -1,12 +1,19 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
+- [ ] #34: bug: be honest about missing API keys - never fake functionality
+- [ ] #30: feat: add .env file support for API keys
+- [ ] #28: feat: add Zotero user ID auto-discovery from API key
 - [ ] #22: fix: Zotero connection validation missing
+- [ ] #24: fix: no API key validation
+- [ ] #26: fix: ZoteroSource class not integrated into CLI
+- [ ] #29: feat: add Zotero My Publications endpoint support
+- [ ] #31: feat: add standardized citation key generation
+- [ ] #32: feat: add fuzzy title matching with configurable threshold
+- [ ] #33: feat: add BibTeX export for missing publications
 - [ ] #21: fix: inconsistent error handling between fetch and check commands
 - [ ] #23: fix: test suite regression - message mismatch
-- [ ] #24: fix: no API key validation
 - [ ] #25: refactor: sources.py exceeds size limit
-- [ ] #26: fix: ZoteroSource class not integrated into CLI
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)

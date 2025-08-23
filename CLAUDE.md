@@ -65,3 +65,8 @@ See pyproject.toml for complete dependency list. Main dependencies:
 - Type hints with mypy checking
 - Comprehensive error handling
 - No hardcoded credentials or secrets
+- **BE HONEST about API key requirements** - always ask user for missing keys, NEVER fake functionality
+  - When API keys are missing, provide clear error messages
+  - Never attempt to work around authentication requirements
+  - Guide users on how to obtain necessary API keys
+  - Fail fast with helpful error messages rather than degraded functionality
