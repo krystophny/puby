@@ -227,7 +227,7 @@ def check(
 @cli.command()
 @click.option(
     "--orcid",
-    help="ORCID ID to fetch publications from",
+    help="ORCID profile URL (e.g., https://orcid.org/0000-0000-0000-0000)",
     type=str,
 )
 @click.option(
@@ -251,8 +251,16 @@ def fetch(orcid: Optional[str], output: str) -> None:
 
     click.echo(f"Found {len(publications)} publications")
 
-    # Save to file (implement based on format)
-    click.echo(f"Saving to {output}")
+    # Save to BibTeX file
+    try:
+        with open(output, 'w', encoding='utf-8') as f:
+            for pub in publications:
+                f.write(pub.to_bibtex())
+                f.write('\n\n')
+        click.echo(f"Successfully saved {len(publications)} publications to {output}")
+    except Exception as e:
+        click.echo(f"Error saving to {output}: {e}", err=True)
+        sys.exit(1)
 
 
 def main() -> None:

@@ -159,32 +159,19 @@ Abstract base class `PublicationSource` with implementations:
 - Mock responses for reliable testing
 - CLI command testing with Click's testing utilities
 
-## Future Enhancements
+## Current Implementation Status
 
-### Phase 1: Core Functionality ✅
-- CLI argument parsing
-- ORCID integration
-- Zotero integration
-- Basic matching algorithm
-
-### Phase 2: Extended Sources
-- Google Scholar integration
-- Pure portal support
-- arXiv integration
-- PubMed integration
-
-### Phase 3: Advanced Features
-- Batch operations
-- Automated synchronization
-- Web interface
-- Citation metrics
-- Duplicate auto-merging
-
-### Phase 4: Intelligence Layer
-- Machine learning for better matching
-- Metadata enhancement
-- Author disambiguation
-- Conference vs journal detection
+### Completed Features ✅
+- CLI argument parsing with comprehensive help
+- ORCID API integration and publication fetching
+- Zotero API integration (public and private libraries)
+- Google Scholar profile scraping
+- Pure research portal support (API and HTML fallback)
+- Publication matching algorithms with configurable thresholds
+- Multiple output formats (table, JSON, CSV, BibTeX)
+- Duplicate detection within libraries
+- Missing publication identification
+- Cross-platform colored console output
 
 ## Development Workflow
 
@@ -201,30 +188,6 @@ Abstract base class `PublicationSource` with implementations:
 - **Installation**: pip install
 - **Updates**: Semantic versioning
 - **Compatibility**: Python 3.8+
-
-## Configuration
-
-### Environment Variables
-
-- `PUBY_ZOTERO_API_KEY`: Default Zotero API key
-- `PUBY_ZOTERO_LIBRARY`: Default library ID
-- `PUBY_LOG_LEVEL`: Logging verbosity
-
-### Config File (Future)
-
-```yaml
-# ~/.puby/config.yaml
-zotero:
-  api_key: xxx
-  library_id: 12345
-
-sources:
-  orcid: 0000-0000-0000-0000
-  scholar: user_id
-
-matching:
-  threshold: 0.8
-```
 
 ## Success Metrics
 

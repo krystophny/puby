@@ -4,12 +4,12 @@ A Python tool for researchers to manage and synchronize their publication lists 
 
 ## Features
 
-- 📚 Fetch publications from multiple sources (ORCID, Google Scholar, Pure portals)
-- 🔄 Synchronize with Zotero libraries
-- 🔍 Identify missing publications and duplicates
-- 📊 Multiple output formats (table, JSON, CSV, BibTeX)
-- 🎨 Clean command-line interface with colored output
-- 🚀 Fast and efficient publication matching
+- Fetch publications from multiple sources (ORCID, Google Scholar, Pure portals)
+- Synchronize with Zotero libraries
+- Identify missing publications and duplicates
+- Multiple output formats (table, JSON, CSV, BibTeX)
+- Clean command-line interface with colored output
+- Fast and efficient publication matching
 
 ## Installation
 
@@ -84,6 +84,20 @@ Compare publications across sources and identify missing or duplicate entries.
 
 **Note**: At least one source URL (--scholar, --orcid, or --pure) must be provided.
 
+### `puby fetch`
+
+Fetch publications from a single source and save them to a BibTeX file.
+
+| Option | Description | Required |
+|--------|-------------|----------|
+| `--orcid URL` | ORCID profile URL | Yes |
+| `--output FILE` | Output file path (default: publications.bib) | No |
+
+```bash
+# Fetch ORCID publications and save as BibTeX
+puby fetch --orcid https://orcid.org/0000-0003-4773-416X --output my_publications.bib
+```
+
 ## Configuration
 
 ### Zotero API Key
@@ -94,15 +108,6 @@ To access private Zotero libraries, you'll need an API key:
 2. Go to Settings → Feeds/API
 3. Create a new API key with read permissions
 4. Use the key with `--api-key` option
-
-### Environment Variables
-
-You can set default values using environment variables:
-
-```bash
-export PUBY_ZOTERO_API_KEY=your_api_key
-export PUBY_ZOTERO_LIBRARY=your_library_id
-```
 
 ## Development
 
@@ -147,16 +152,7 @@ ruff check puby tests
 mypy puby
 ```
 
-## Architecture
-
-Puby uses a modular architecture with clear separation of concerns:
-
-- **CLI** (`cli.py`): Command-line interface using Click
-- **Models** (`models.py`): Data models for publications and authors
-- **Sources** (`sources.py`): Adapters for different publication sources
-- **Matcher** (`matcher.py`): Publication matching and comparison logic
-- **Reporter** (`reporter.py`): Output formatting and reporting
-- **Client** (`client.py`): Main client coordinating operations
+For detailed architecture information, see [DESIGN.md](DESIGN.md).
 
 ## Contributing
 
@@ -183,15 +179,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 For issues and questions:
 - Open an issue on [GitHub](https://github.com/krystophny/puby/issues)
-- Check the [documentation](https://github.com/krystophny/puby/wiki)
 
-## Roadmap
-
-- [ ] Google Scholar integration (via scholarly library)
-- [ ] Pure portal API support (institution-specific)
-- [ ] Automatic duplicate merging
-- [ ] Publication metadata enhancement
-- [ ] Web interface
-- [ ] Batch operations support
-- [ ] Export to multiple formats simultaneously
-- [ ] Citation count tracking
