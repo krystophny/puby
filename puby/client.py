@@ -1,6 +1,6 @@
 """Main client for fetching publications."""
 
-from typing import List, Optional
+from typing import List
 import logging
 
 from .models import Publication

@@ -287,8 +287,6 @@ class ZoteroLibrary(PublicationSource):
             date_str = data.get("date", "")
             if date_str:
                 # Try to extract year from date string
-                import re
-
                 year_match = re.search(r"\d{4}", date_str)
                 if year_match:
                     year = int(year_match.group())
@@ -423,7 +421,6 @@ class ZoteroSource(PublicationSource):
             date_str = data.get("date", "")
             if date_str:
                 # Extract 4-digit year from various date formats
-                import re
                 year_match = re.search(r"\d{4}", date_str)
                 if year_match:
                     year = int(year_match.group())

@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from puby.models import Author, Publication, ZoteroConfig
+from puby.models import ZoteroConfig
 from puby.sources import ZoteroSource
 
 
@@ -34,7 +34,7 @@ class TestZoteroSource:
             group_id="12345", 
             library_type="group"
         )
-        source = ZoteroSource(config)
+        ZoteroSource(config)
         
         mock_zotero.assert_called_once_with("12345", "group", "test_key")
 
@@ -46,7 +46,7 @@ class TestZoteroSource:
             group_id="67890",
             library_type="user"
         )
-        source = ZoteroSource(config)
+        ZoteroSource(config)
         
         mock_zotero.assert_called_once_with("67890", "user", "test_key")
 
