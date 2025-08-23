@@ -21,7 +21,7 @@ class TestZoteroSource:
         mock_zotero.return_value = mock_client
         
         config = ZoteroConfig(
-            api_key="test_api_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef12", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
         assert source.config == config
@@ -36,19 +36,19 @@ class TestZoteroSource:
     def test_zotero_client_initialization_group(self, mock_zotero):
         """Test Zotero client initialization for group library."""
         config = ZoteroConfig(
-            api_key="test_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef34", group_id="12345", library_type="group"
         )
         ZoteroSource(config)
 
-        mock_zotero.assert_called_once_with("12345", "group", "test_key")
+        mock_zotero.assert_called_once_with("12345", "group", "abcdef1234567890abcdef34")
 
     @patch("puby.sources.zotero.Zotero")
     def test_zotero_client_initialization_user(self, mock_zotero):
         """Test Zotero client initialization for user library."""
-        config = ZoteroConfig(api_key="test_key", group_id="67890", library_type="user")
+        config = ZoteroConfig(api_key="abcdef1234567890abcdef34", group_id="67890", library_type="user")
         ZoteroSource(config)
 
-        mock_zotero.assert_called_once_with("67890", "user", "test_key")
+        mock_zotero.assert_called_once_with("67890", "user", "abcdef1234567890abcdef34")
 
     @patch("puby.sources.requests.get")
     @patch("puby.sources.zotero.Zotero")
@@ -58,7 +58,7 @@ class TestZoteroSource:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            "key": "test_api_key",
+            "key": "abcdef1234567890abcdef12",
             "userID": 123456,
             "username": "testuser",
             "access": {
@@ -72,20 +72,20 @@ class TestZoteroSource:
         mock_get.return_value = mock_response
 
         # Create config without user ID
-        config = ZoteroConfig(api_key="test_api_key", library_type="user")
+        config = ZoteroConfig(api_key="abcdef1234567890abcdef12", library_type="user")
         source = ZoteroSource(config)
 
         # Verify the auto-discovery was performed
         mock_get.assert_called_once_with(
             "https://api.zotero.org/keys/current",
             headers={
-                "Zotero-API-Key": "test_api_key",
+                "Zotero-API-Key": "abcdef1234567890abcdef12",
                 "Accept": "application/json"
             }
         )
 
         # Verify Zotero client was initialized with discovered user ID
-        mock_zotero.assert_called_once_with("123456", "user", "test_api_key")
+        mock_zotero.assert_called_once_with("123456", "user", "abcdef1234567890abcdef12")
 
     @patch("puby.sources.requests.get")
     @patch("puby.sources.zotero.Zotero")
@@ -104,7 +104,7 @@ class TestZoteroSource:
         mock_get.return_value = mock_response
 
         # Create config without user ID
-        config = ZoteroConfig(api_key="invalid_key", library_type="user")
+        config = ZoteroConfig(api_key="invalidkey567890123456ab", library_type="user")
         
         # Should raise error with helpful message
         with pytest.raises(ValueError, match="Failed to auto-discover user ID.*Invalid API key"):
@@ -116,7 +116,7 @@ class TestZoteroSource:
         """Test that explicit user ID is used without auto-discovery."""
         # Create config with explicit user ID
         config = ZoteroConfig(
-            api_key="test_api_key", 
+            api_key="abcdef1234567890abcdef12", 
             group_id="999999",  # Explicit user ID
             library_type="user"
         )
@@ -126,7 +126,7 @@ class TestZoteroSource:
         mock_get.assert_not_called()
 
         # Verify Zotero client was initialized with explicit user ID
-        mock_zotero.assert_called_once_with("999999", "user", "test_api_key")
+        mock_zotero.assert_called_once_with("999999", "user", "abcdef1234567890abcdef12")
 
     @patch("puby.sources.requests.get")
     @patch("puby.sources.zotero.Zotero")
@@ -134,7 +134,7 @@ class TestZoteroSource:
         """Test that group libraries don't use auto-discovery."""
         # Create config for group library
         config = ZoteroConfig(
-            api_key="test_api_key",
+            api_key="abcdef1234567890abcdef12",
             group_id="12345",
             library_type="group"
         )
@@ -144,7 +144,7 @@ class TestZoteroSource:
         mock_get.assert_not_called()
 
         # Verify Zotero client was initialized with group ID
-        mock_zotero.assert_called_once_with("12345", "group", "test_api_key")
+        mock_zotero.assert_called_once_with("12345", "group", "abcdef1234567890abcdef12")
 
     @patch("puby.sources.requests.get")
     def test_zotero_user_id_autodiscovery_network_error(self, mock_get):
@@ -153,7 +153,7 @@ class TestZoteroSource:
         mock_get.side_effect = requests.ConnectionError("Network error")
 
         # Create config without user ID
-        config = ZoteroConfig(api_key="test_api_key", library_type="user")
+        config = ZoteroConfig(api_key="abcdef1234567890abcdef12", library_type="user")
         
         # Should raise error with helpful message
         with pytest.raises(ValueError, match="Failed to auto-discover user ID"):
@@ -166,14 +166,14 @@ class TestZoteroSource:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            "key": "test_api_key",
+            "key": "abcdef1234567890abcdef12",
             # Missing userID field
             "username": "testuser"
         }
         mock_get.return_value = mock_response
 
         # Create config without user ID
-        config = ZoteroConfig(api_key="test_api_key", library_type="user")
+        config = ZoteroConfig(api_key="abcdef1234567890abcdef12", library_type="user")
         
         # Should raise error with helpful message
         with pytest.raises(ValueError, match="Invalid response from Zotero API"):
@@ -226,7 +226,7 @@ class TestZoteroSource:
 
         # Create source and fetch
         config = ZoteroConfig(
-            api_key="test_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef56", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
         publications = source.fetch()
@@ -299,7 +299,7 @@ class TestZoteroSource:
         mock_zotero.return_value = mock_client
 
         config = ZoteroConfig(
-            api_key="test_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef56", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
         publications = source.fetch()
@@ -317,7 +317,7 @@ class TestZoteroSource:
         mock_zotero.return_value = mock_client
 
         config = ZoteroConfig(
-            api_key="test_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef56", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
         
@@ -345,7 +345,7 @@ class TestZoteroSource:
         }
 
         config = ZoteroConfig(
-            api_key="test_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef56", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
         pub = source._parse_zotero_item(book_item)
@@ -366,7 +366,7 @@ class TestZoteroSource:
         }
 
         config = ZoteroConfig(
-            api_key="test_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef56", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
         pub = source._parse_zotero_item(note_item)
@@ -390,7 +390,7 @@ class TestZoteroSource:
         }
 
         config = ZoteroConfig(
-            api_key="test_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef56", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
         pub = source._parse_zotero_item(item)
@@ -413,7 +413,7 @@ class TestZoteroSource:
         }
 
         config = ZoteroConfig(
-            api_key="test_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef56", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
         pub = source._parse_zotero_item(item)
@@ -430,7 +430,7 @@ class TestZoteroSource:
         mock_zotero.return_value = mock_client
 
         config = ZoteroConfig(
-            api_key="test_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef56", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
 
@@ -474,7 +474,7 @@ class TestZoteroSource:
         mock_zotero.return_value = mock_client
 
         config = ZoteroConfig(
-            api_key="test_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef56", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
         
@@ -497,7 +497,7 @@ class TestZoteroSource:
         mock_zotero.return_value = mock_client
 
         config = ZoteroConfig(
-            api_key="invalid_key", group_id="12345", library_type="group"
+            api_key="invalidkey567890123456ab", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
         
@@ -517,7 +517,7 @@ class TestZoteroSource:
         mock_zotero.return_value = mock_client
 
         config = ZoteroConfig(
-            api_key="test_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef56", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
         
@@ -537,7 +537,7 @@ class TestZoteroSource:
         mock_zotero.return_value = mock_client
 
         config = ZoteroConfig(
-            api_key="test_key", group_id="99999", library_type="group"
+            api_key="abcdef1234567890abcdef56", group_id="99999", library_type="group"
         )
         source = ZoteroSource(config)
         
@@ -554,7 +554,7 @@ class TestZoteroSource:
         mock_zotero.return_value = mock_client
 
         config = ZoteroConfig(
-            api_key="test_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef56", group_id="12345", library_type="group"
         )
         
         # Create source - should validate connection
@@ -572,7 +572,7 @@ class TestZoteroSource:
         mock_zotero.return_value = mock_client
 
         config = ZoteroConfig(
-            api_key="invalid_key", group_id="12345", library_type="group"
+            api_key="invalidkey567890123456ab", group_id="12345", library_type="group"
         )
         
         # Should raise error during initialization due to authentication failure
@@ -590,7 +590,7 @@ class TestZoteroSource:
         mock_zotero.return_value = mock_client
 
         config = ZoteroConfig(
-            api_key="test_key", group_id="12345", library_type="group"
+            api_key="abcdef1234567890abcdef56", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
         
@@ -687,13 +687,13 @@ class TestZoteroSource:
 
         # Test with group library
         config = ZoteroConfig(
-            api_key="test_api_key_12345", group_id="987654", library_type="group"
+            api_key="abcdef1234567890abcdef90", group_id="987654", library_type="group"
         )
         source = ZoteroSource(config)
         publications = source.fetch()
 
         # Verify client initialization
-        mock_zotero.assert_called_once_with("987654", "group", "test_api_key_12345")
+        mock_zotero.assert_called_once_with("987654", "group", "abcdef1234567890abcdef90")
 
         # Verify API calls
         mock_client.everything.assert_called_once()

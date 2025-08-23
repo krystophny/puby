@@ -129,10 +129,11 @@ class TestEnvSupport:
         try:
             with runner.isolated_filesystem():
                 # Create .env file
-                Path(".env").write_text("ZOTERO_API_KEY=test_env_key\n")
+                Path(".env").write_text("ZOTERO_API_KEY=abcdef1234567890abcdef78\n")
                 
                 # Mock Zotero to check API key
                 mock_zotero_instance = Mock()
+                mock_zotero_instance.publications = []
                 mock_zotero.return_value = mock_zotero_instance
                 
                 # Mock client
@@ -153,7 +154,7 @@ class TestEnvSupport:
                 )
                 
                 # Should have called ZoteroLibrary with API key from .env
-                mock_zotero.assert_called_with("12345", api_key="test_env_key")
+                mock_zotero.assert_called_with("12345", api_key="abcdef1234567890abcdef78")
         finally:
             # Restore original environment
             if original_env is not None:
@@ -167,7 +168,7 @@ class TestEnvSupport:
         
         with runner.isolated_filesystem():
             # Create .env file
-            Path(".env").write_text("ZOTERO_API_KEY=env_key\n")
+            Path(".env").write_text("ZOTERO_API_KEY=env1234567890abcdef1234\n")
             
             # Mock Zotero to check API key
             mock_zotero_instance = Mock()
@@ -185,13 +186,13 @@ class TestEnvSupport:
                     "check",
                     "--orcid", "https://orcid.org/0000-0000-0000-0000",
                     "--zotero", "12345",
-                    "--api-key", "cli_override_key",
+                    "--api-key", "abcdef1234567890abcdef90",
                 ],
                 catch_exceptions=False
             )
             
             # Should have called ZoteroLibrary with CLI API key
-            mock_zotero.assert_called_with("12345", api_key="cli_override_key")
+            mock_zotero.assert_called_with("12345", api_key="abcdef1234567890abcdef90")
 
     def test_env_file_with_multiple_variables(self):
         """Test loading .env file with multiple variables."""

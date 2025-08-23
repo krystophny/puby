@@ -43,7 +43,7 @@ class TestZoteroAPIKeyHonesty:
             ZoteroSource(invalid_config)
 
         # Test auto-discovery failure with valid format but non-working key
-        invalid_config = ZoteroConfig(api_key="P9NiFoyLeZu2bZNvvuQPDWs1", library_type="user")
+        invalid_config = ZoteroConfig(api_key="invalid_key_format", library_type="user")
         
         # Mock failed auto-discovery
         mock_response = Mock()
@@ -73,7 +73,7 @@ class TestZoteroAPIKeyHonesty:
         # Simulate unauthorized error
         mock_zotero.everything.side_effect = UserNotAuthorisedError("Invalid API key")
         
-        config = ZoteroConfig(api_key="P9NiFoyLeZu2bZNvvuQPDWs2", group_id="123456")
+        config = ZoteroConfig(api_key="abcdef1234567890abcdef78", group_id="123456")
         source = ZoteroSource(config)
         
         # Should raise a clear error instead of returning empty list
@@ -111,7 +111,7 @@ class TestZoteroAPIKeyHonesty:
                 'check',
                 '--orcid', 'https://orcid.org/0000-0000-0000-0000',
                 '--zotero', '123456',
-                '--api-key', 'invalid_key_123'
+                '--api-key', 'invalid_key_format'
             ])
             
             assert result.exit_code != 0

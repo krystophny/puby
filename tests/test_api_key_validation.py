@@ -85,7 +85,7 @@ class TestZoteroAPIKeyFormatValidation:
     def test_api_key_format_error_message_clarity(self):
         """Test that format validation provides clear error messages."""
         # Test various invalid formats
-        config = ZoteroConfig(api_key="invalid_key", library_type="user")
+        config = ZoteroConfig(api_key="invalid_key_format", library_type="user")
         assert not config.is_valid()
         errors = config.validation_errors()
         
