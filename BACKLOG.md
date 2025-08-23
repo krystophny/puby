@@ -15,9 +15,9 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
-- [ ] #30: feat: add .env file support for API keys (branch: feat-30-env-file-support)
 
 ## DONE (Completed)
+- [x] #30: feat: add .env file support for API keys (PR #36)
 - [x] #34: bug: be honest about missing API keys - never fake functionality (PR #35)
 - [x] #10: feat: add Pure research portal support (PR #20 merged)
 - [x] #9: feat: add Google Scholar profile parsing support (PR #19)
