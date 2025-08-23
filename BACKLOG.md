@@ -8,8 +8,8 @@
 - [ ] #10: feat: add Pure research portal support
 
 ## DOING (Current Work)
-- [ ] #5: feat: implement basic Zotero API client (branch: feat-zotero-api-client-5)
 
 ## DONE (Completed)
+- [x] #5: feat: implement basic Zotero API client (PR #15)
 - [x] #4: feat: implement ORCID API parser (PR #14)
 - [x] #3: feat: implement core publication data types
