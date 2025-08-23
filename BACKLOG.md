@@ -14,7 +14,6 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
-- [ ] #28: feat: add Zotero user ID auto-discovery from API key
 
 ## DONE (Completed)
 - [x] #28: feat: add Zotero user ID auto-discovery from API key (PR #37)
