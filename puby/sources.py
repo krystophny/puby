@@ -13,6 +13,16 @@ from bs4 import BeautifulSoup, Tag
 from pyzotero import zotero  # type: ignore
 
 from .models import Author, Publication, ZoteroConfig
+from .bibtex_parser import BibtexParser
+
+# Import the separated source classes
+try:
+    from .scholar_source import ScholarSource
+    from .pure_source import PureSource
+except ImportError:
+    # Fallback if modules not available
+    ScholarSource = None
+    PureSource = None
 
 
 class PublicationSource(ABC):
@@ -181,547 +191,6 @@ class ORCIDSource(PublicationSource):
             return None
 
 
-class ScholarSource(PublicationSource):
-    """Fetch publications from Google Scholar profile via web scraping."""
-
-    def __init__(self, scholar_url: str):
-        """Initialize Scholar source."""
-        self.scholar_url = scholar_url
-        self.scholar_user_id = self._extract_scholar_id(scholar_url)
-        self.logger = logging.getLogger(__name__)
-        self.base_url = "https://scholar.google.com/citations"
-
-    def _extract_scholar_id(self, url: str) -> str:
-        """Extract Scholar user ID from URL or return direct ID."""
-        if not url:
-            raise ValueError("Invalid Google Scholar URL or ID: empty string")
-
-        # Check if it's already just a user ID (looks like Scholar ID pattern)
-        # Scholar IDs are typically alphanumeric, may contain underscores/hyphens
-        # but should not contain words like "invalid", "scholar", "url" etc.
-        if (
-            re.match(r"^[A-Za-z0-9_-]+$", url)
-            and not url.startswith("http")
-            and len(url) > 3
-            and len(url) < 50
-            and not any(
-                word in url.lower() for word in ["invalid", "scholar", "url", "google"]
-            )
-        ):
-            return url
-
-        # Try to extract user ID from URL
-        if "scholar.google.com" in url:
-            parsed_url = urlparse(url)
-            query_params = parse_qs(parsed_url.query)
-            user_id = query_params.get("user", [])
-            if user_id:
-                return user_id[0]
-
-        raise ValueError(f"Invalid Google Scholar URL or ID: {url}")
-
-    def _build_url(self, start: int) -> str:
-        """Build Scholar profile URL with pagination."""
-        return (
-            f"{self.base_url}?user={self.scholar_user_id}&hl=en"
-            f"&cstart={start}&pagesize=100"
-        )
-
-    def _get_headers(self) -> Dict[str, str]:
-        """Get headers with proper User-Agent."""
-        return {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-            ),
-            "Accept": (
-                "text/html,application/xhtml+xml,application/xml;q=0.9,"
-                "image/webp,*/*;q=0.8"
-            ),
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-        }
-
-    def _apply_rate_limit(self) -> None:
-        """Apply random delay to avoid being blocked."""
-        delay = random.uniform(1.0, 3.0)
-        time.sleep(delay)
-
-    def fetch(self) -> List[Publication]:
-        """Fetch publications from Google Scholar profile."""
-        publications = []
-        start = 0
-
-        try:
-            while True:
-                url = self._build_url(start)
-                self.logger.info(f"Fetching Scholar profile page: {url}")
-
-                response = requests.get(url, headers=self._get_headers())
-                response.raise_for_status()
-
-                soup = BeautifulSoup(response.text, "html.parser")
-                page_pubs = self._parse_publications_page(soup)
-
-                if not page_pubs:
-                    # No more publications found
-                    break
-
-                publications.extend(page_pubs)
-
-                # Check if there are more pages
-                if not self._has_next_page(soup):
-                    break
-
-                start += 100
-                self._apply_rate_limit()
-
-        except requests.RequestException as e:
-            self.logger.error(f"Error fetching Google Scholar data: {e}")
-            return []
-
-        self.logger.info(f"Fetched {len(publications)} publications from Scholar")
-        return publications
-
-    def _has_next_page(self, soup: BeautifulSoup) -> bool:
-        """Check if there are more pages to fetch."""
-        next_button = soup.find("button", {"id": "gsc_bpf_next"})
-        if next_button is None:
-            return False
-        class_attr = next_button.get("class")
-        class_list = class_attr if isinstance(class_attr, list) else []
-        return "disabled" not in class_list
-
-    def _parse_publications_page(self, soup: BeautifulSoup) -> List[Publication]:
-        """Parse publications from a single page."""
-        publications: List[Publication] = []
-
-        # Find publication table
-        pub_table = soup.find("div", {"id": "gs_ccl"})
-        if not pub_table:
-            return publications
-
-        # Find all publication rows
-        pub_rows = pub_table.find_all("tr", class_="gsc_a_tr")
-        if not isinstance(pub_rows, list):
-            return publications
-
-        for row in pub_rows:
-            pub = self._parse_publication_row(row)
-            if pub:
-                publications.append(pub)
-
-        return publications
-
-    def _parse_publication_row(self, row: Union[Tag, Any]) -> Optional[Publication]:
-        """Parse individual publication row."""
-        try:
-            title = self._extract_title_from_row(row)
-            if not title:
-                return None
-
-            title_cell = row.find("td", class_="gsc_a_t")
-            if not title_cell:
-                return None
-
-            authors, journal, year = self._extract_publication_metadata(title_cell)
-
-            # Extract year from year column if not found in pub info
-            if year is None:
-                year = self._extract_year_from_column(row)
-
-            return Publication(
-                title=title,
-                authors=authors,
-                year=year,
-                journal=journal,
-                source="Google Scholar",
-                raw_data={"html_row": str(row)},
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error parsing Scholar publication row: {e}")
-            return None
-
-    def _extract_title_from_row(self, row: Union[Tag, Any]) -> Optional[str]:
-        """Extract title from publication row."""
-        if not hasattr(row, 'find'):
-            return None
-
-        title_cell = row.find("td", class_="gsc_a_t")
-        if not title_cell:
-            return None
-
-        title_link = title_cell.find("a", class_="gsc_a_at")
-        if not title_link:
-            return None
-
-        title = title_link.get_text(strip=True)
-        return title if title else None
-
-    def _extract_publication_metadata(
-        self, title_cell: Union[Tag, Any]
-    ) -> Tuple[List[Author], Optional[str], Optional[int]]:
-        """Extract authors, journal, and year from title cell."""
-        if not hasattr(title_cell, 'find_all'):
-            return [Author(name="[Authors not available]")], None, None
-
-        gray_divs = title_cell.find_all("div", class_="gs_gray")
-        if not isinstance(gray_divs, list):
-            return [Author(name="[Authors not available]")], None, None
-
-        authors: List[Author] = []
-        journal: Optional[str] = None
-        year: Optional[int] = None
-
-        if len(gray_divs) >= 1:
-            # First gray div typically contains authors
-            authors = self._parse_authors(gray_divs[0].get_text(strip=True))
-        else:
-            # No author information available
-            authors = [Author(name="[Authors not available]")]
-
-        if len(gray_divs) >= 2:
-            # Second gray div typically contains journal and year
-            pub_info = gray_divs[1].get_text(strip=True)
-            journal, year = self._parse_journal_and_year(pub_info)
-
-        return authors, journal, year
-
-    def _extract_year_from_column(self, row: Union[Tag, Any]) -> Optional[int]:
-        """Extract year from the year column."""
-        if not hasattr(row, 'find'):
-            return None
-
-        year_cell = row.find("td", class_="gsc_a_y")
-        if not year_cell:
-            return None
-
-        year_span = year_cell.find("span", class_="gsc_a_h")
-        if not year_span:
-            return None
-
-        year_text = year_span.get_text(strip=True)
-        if not year_text:
-            return None
-
-        try:
-            return int(year_text)
-        except ValueError:
-            return None
-
-    def _parse_authors(self, author_text: str) -> List[Author]:
-        """Parse authors from comma-separated text."""
-        if not author_text.strip():
-            return [Author(name="[Authors not available]")]
-
-        authors = []
-        for author in author_text.split(","):
-            author_name = author.strip()
-            if author_name:
-                authors.append(Author(name=author_name))
-
-        return authors if authors else [Author(name="[Authors not available]")]
-
-    def _parse_journal_and_year(
-        self, pub_info: str
-    ) -> Tuple[Optional[str], Optional[int]]:
-        """Parse journal name and year from publication info string."""
-        if not pub_info.strip():
-            return None, None
-
-        # Handle special case: arXiv preprint with embedded year in identifier
-        arxiv_match = re.search(r"arXiv:(\d{4})\.", pub_info)
-        if arxiv_match:
-            year = int(arxiv_match.group(1))
-            # Remove the entire arXiv identifier for journal name
-            journal = re.sub(r"\s*arXiv:[\d.]+.*$", "", pub_info).strip()
-            return journal if journal else None, year
-
-        # Try to extract year (4 consecutive digits at end, preceded by comma or space)
-        year_match = re.search(r"[,\s]+((19|20)\d{2})$", pub_info)
-        extracted_year: Optional[int] = int(year_match.group(1)) if year_match else None
-
-        # If no year at end, try anywhere in the string
-        if not extracted_year:
-            year_match = re.search(r"\b(19|20)\d{2}\b", pub_info)
-            extracted_year = int(year_match.group()) if year_match else None
-
-        # Extract journal name
-        journal = pub_info
-
-        if year_match:
-            # Everything before the year
-            journal = pub_info[: year_match.start()].strip()
-
-        # Clean up journal name by removing common patterns
-        if journal:
-            # Remove volume/issue/page info patterns like " 15 (4), 123-130" at end
-            journal = re.sub(r"\s+\d+\s*\([^)]*\).*$", "", journal)
-            # Remove trailing volume numbers like " 400, 109001"
-            journal = re.sub(r"\s+\d+,.*$", "", journal)
-            # Remove trailing commas and whitespace
-            journal = re.sub(r"[,\s]+$", "", journal)
-            journal = journal.strip()
-
-        return journal if journal else None, extracted_year
-
-
-class PureSource(PublicationSource):
-    """Fetch publications from Pure research portal.
-    
-    Supports both HTML scraping and API access where available.
-    Pure portals vary by institution but share common patterns.
-    """
-
-    def __init__(self, pure_url: str):
-        """Initialize Pure source with validation."""
-        if not pure_url or not pure_url.strip():
-            raise ValueError("Invalid Pure portal URL: empty string")
-        
-        if not pure_url.startswith("http"):
-            raise ValueError(f"Invalid Pure portal URL: {pure_url}")
-            
-        self.pure_url = pure_url.strip()
-        self.logger = logging.getLogger(__name__)
-        self._base_domain = self._extract_base_domain()
-
-    def _extract_base_domain(self) -> str:
-        """Extract base domain from Pure URL."""
-        parsed = urlparse(self.pure_url)
-        return f"{parsed.scheme}://{parsed.netloc}"
-
-    def _extract_person_id(self) -> str:
-        """Extract person identifier from Pure URL."""
-        # Pattern: /en/persons/person-identifier or /persons/person-identifier
-        match = re.search(r"/persons/([^/?]+)", self.pure_url)
-        if match:
-            return match.group(1)
-        raise ValueError(f"Cannot extract person ID from URL: {self.pure_url}")
-
-    def _build_api_url(self) -> str:
-        """Build Pure API URL for research outputs."""
-        person_id = self._extract_person_id()
-        return f"{self._base_domain}/ws/api/persons/{person_id}/research-outputs"
-
-    def _get_headers(self) -> Dict[str, str]:
-        """Get headers with proper User-Agent."""
-        return {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-            ),
-            "Accept": (
-                "text/html,application/xhtml+xml,application/xml;q=0.9,"
-                "image/webp,*/*;q=0.8"
-            ),
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-        }
-
-    def _apply_rate_limit(self) -> None:
-        """Apply delay to avoid overwhelming Pure portals."""
-        delay = random.uniform(1.0, 2.0)
-        time.sleep(delay)
-
-    def fetch(self) -> List[Publication]:
-        """Fetch publications from Pure portal.
-        
-        Attempts API access first, falls back to HTML scraping.
-        """
-        # Try API first if available
-        try:
-            api_url = self._build_api_url()
-            self.logger.info(f"Attempting Pure API access: {api_url}")
-            
-            response = requests.get(api_url, headers={"Accept": "application/json"})
-            if response.status_code == 200:
-                return self._parse_api_response(response.json())
-        except Exception as e:
-            self.logger.debug(f"Pure API not available, falling back to HTML: {e}")
-
-        # Fallback to HTML scraping
-        return self._fetch_from_html()
-
-    def _fetch_from_html(self) -> List[Publication]:
-        """Fetch publications via HTML scraping with pagination support."""
-        publications = []
-        current_url = self.pure_url
-        
-        try:
-            while current_url:
-                self.logger.info(f"Fetching Pure page: {current_url}")
-                
-                response = requests.get(current_url, headers=self._get_headers())
-                response.raise_for_status()
-                
-                soup = BeautifulSoup(response.text, "html.parser")
-                page_publications = self._parse_html_page(soup)
-                publications.extend(page_publications)
-                
-                # Check for next page
-                next_url = self._find_next_page_url(soup)
-                if next_url:
-                    if not next_url.startswith("http"):
-                        # Handle relative URLs - could be relative to current page or base domain
-                        from urllib.parse import urljoin
-                        next_url = urljoin(current_url, next_url)
-                    current_url = next_url
-                    self._apply_rate_limit()
-                else:
-                    break
-                    
-        except requests.RequestException as e:
-            self.logger.error(f"Error fetching Pure data: {e}")
-            
-        return publications
-
-    def _find_next_page_url(self, soup: BeautifulSoup) -> Optional[str]:
-        """Find URL for next page of results."""
-        # Look for "Load more" or pagination links
-        load_more = soup.find("div", class_="load-more")
-        if load_more:
-            link = load_more.find("a")
-            if link and link.get("href"):
-                return link["href"]
-                
-        # Look for pagination with page parameter
-        pagination = soup.find("a", string=re.compile(r"next|more", re.I))
-        if pagination and pagination.get("href"):
-            return pagination["href"]
-            
-        return None
-
-    def _parse_html_page(self, soup: BeautifulSoup) -> List[Publication]:
-        """Parse publications from HTML page."""
-        publications = []
-        
-        # Look for main content container
-        content_div = soup.find("div", class_="result-container")
-        if not content_div:
-            return publications
-            
-        # Find publication containers  
-        pub_containers = content_div.find_all("div", class_=re.compile(r"rendering.*contribution"))
-        
-        for container in pub_containers:
-            pub = self._parse_publication_container(container)
-            if pub:
-                publications.append(pub)
-                
-        return publications
-
-    def _parse_publication_container(self, container: BeautifulSoup) -> Optional[Publication]:
-        """Parse individual publication container."""
-        try:
-            # Extract title
-            title = self._extract_title_from_container(container)
-            if not title:
-                return None
-                
-            # Extract authors
-            authors = self._extract_authors_from_container(container)
-            
-            # Extract publication details
-            details = self._extract_publication_details(container)
-            
-            return Publication(
-                title=title,
-                authors=authors,
-                year=details.get("year"),
-                journal=details.get("journal"),
-                volume=details.get("volume"),
-                issue=details.get("issue"),
-                pages=details.get("pages"),
-                doi=details.get("doi"),
-                url=details.get("url"),
-                source="Pure",
-                raw_data={"html": str(container)}
-            )
-            
-        except Exception as e:
-            self.logger.error(f"Error parsing Pure publication: {e}")
-            return None
-
-    def _extract_title_from_container(self, container: BeautifulSoup) -> Optional[str]:
-        """Extract publication title."""
-        # Look for title in h3 or title class
-        title_elem = container.find("h3", class_="title")
-        if title_elem:
-            link = title_elem.find("a")
-            if link:
-                title = link.get_text(strip=True)
-                return title if title else None
-                
-        return None
-
-    def _extract_authors_from_container(self, container: BeautifulSoup) -> List[Author]:
-        """Extract authors from publication container."""
-        authors = []
-        
-        # Look for persons/authors container
-        persons_div = container.find("div", class_="persons")
-        if persons_div:
-            # Find author name spans
-            name_spans = persons_div.find_all("span", class_="name")
-            for span in name_spans:
-                name = span.get_text(strip=True)
-                if name and name not in [",", "and"]:
-                    # Clean up name (remove trailing commas)
-                    name = name.rstrip(",").strip()
-                    if name:
-                        authors.append(Author(name=name))
-        
-        return authors if authors else [Author(name="[Authors not available]")]
-
-    def _extract_publication_details(self, container: BeautifulSoup) -> Dict[str, Any]:
-        """Extract publication details like journal, year, etc."""
-        details = {}
-        
-        details_div = container.find("div", class_="rendering_publicationdetails")
-        if details_div:
-            # Extract journal
-            journal_span = details_div.find("span", class_="journal")
-            if journal_span:
-                details["journal"] = journal_span.get_text(strip=True)
-                
-            # Extract year
-            date_span = details_div.find("span", class_="date")
-            if date_span:
-                year_text = date_span.get_text(strip=True)
-                try:
-                    details["year"] = int(year_text)
-                except ValueError:
-                    pass
-                    
-            # Extract volume, issue, pages
-            volume_span = details_div.find("span", class_="volume")
-            if volume_span:
-                details["volume"] = volume_span.get_text(strip=True)
-                
-            issue_span = details_div.find("span", class_="issue")  
-            if issue_span:
-                details["issue"] = issue_span.get_text(strip=True)
-                
-            pages_span = details_div.find("span", class_="pages")
-            if pages_span:
-                details["pages"] = pages_span.get_text(strip=True)
-                
-        return details
-
-    def _parse_api_response(self, data: Dict[str, Any]) -> List[Publication]:
-        """Parse Pure API response (implementation would be institution-specific)."""
-        # This is a placeholder for API parsing
-        # Real implementation would need to handle institution-specific API formats
-        self.logger.info("Pure API parsing not yet implemented for this portal")
-        return []
-
-
-
 class ZoteroSource(PublicationSource):
     """Modern Zotero API client using ZoteroConfig."""
 
@@ -848,6 +317,24 @@ class ZoteroSource(PublicationSource):
 
     def fetch(self) -> List[Publication]:
         """Fetch publications from Zotero library with pagination support."""
+        # Try My Publications endpoint if enabled for user libraries
+        if self.config.use_my_publications and self.config.library_type == "user":
+            try:
+                return self._fetch_my_publications()
+            except Exception as e:
+                error_msg = str(e).lower()
+                # If My Publications endpoint fails, fall back to regular library
+                if "404" in error_msg or "not found" in error_msg:
+                    self.logger.info("My Publications endpoint not available, falling back to regular library")
+                else:
+                    # Re-raise other errors (auth, network, etc.)
+                    raise
+
+        # Regular library fetch
+        return self._fetch_library_items()
+
+    def _fetch_library_items(self) -> List[Publication]:
+        """Fetch publications from regular Zotero library."""
         publications = []
 
         try:
@@ -889,6 +376,119 @@ class ZoteroSource(PublicationSource):
 
         self.logger.info(f"Parsed {len(publications)} publications from Zotero")
         return publications
+
+    def _fetch_my_publications(self) -> List[Publication]:
+        """Fetch publications from Zotero My Publications endpoint."""
+        user_id = self._get_my_publications_user_id()
+        self.logger.info(f"Fetching from My Publications endpoint for user {user_id}")
+        
+        publications = []
+        start = 0
+        limit = 100
+        
+        try:
+            while True:
+                page_pubs = self._fetch_my_publications_page(user_id, start, limit)
+                if not page_pubs:
+                    break
+                    
+                publications.extend(page_pubs)
+                
+                # Handle pagination
+                if self.config.format == "bibtex" or len(page_pubs) < limit:
+                    break
+                start += limit
+                
+        except Exception as e:
+            self._handle_my_publications_error(e)
+
+        self.logger.info(f"Parsed {len(publications)} publications from My Publications")
+        return publications
+    
+    def _get_my_publications_user_id(self) -> str:
+        """Get user ID for My Publications endpoint."""
+        if self.config.library_type != "user":
+            raise ValueError("My Publications endpoint is only available for user libraries")
+            
+        user_id = self.config.group_id
+        if not user_id:
+            user_id = self._autodiscover_user_id(self.config.api_key)
+        
+        return user_id
+    
+    def _fetch_my_publications_page(self, user_id: str, start: int, limit: int) -> List[Publication]:
+        """Fetch a single page of My Publications."""
+        url = f"https://api.zotero.org/users/{user_id}/publications/items"
+        headers, params = self._build_my_publications_request(start, limit)
+        
+        response = requests.get(url, headers=headers, params=params)
+        self._validate_my_publications_response(response)
+        
+        return self._parse_my_publications_response(response)
+    
+    def _build_my_publications_request(self, start: int, limit: int) -> tuple:
+        """Build request headers and parameters for My Publications."""
+        if self.config.format == "bibtex":
+            headers = {
+                "Zotero-API-Key": self.config.api_key,
+                "Accept": "application/x-bibtex"
+            }
+            params = {"format": "bibtex", "limit": limit, "start": start}
+        else:
+            headers = {
+                "Zotero-API-Key": self.config.api_key,
+                "Accept": "application/json"
+            }
+            params = {"format": "json", "limit": limit, "start": start}
+        
+        return headers, params
+    
+    def _validate_my_publications_response(self, response) -> None:
+        """Validate My Publications API response."""
+        if response.status_code == 403:
+            raise ValueError(
+                f"Zotero My Publications authentication failed: Invalid API key. "
+                f"Please check your API key at: https://www.zotero.org/settings/keys"
+            )
+        elif response.status_code == 404:
+            raise ValueError("My Publications endpoint not found")
+        elif response.status_code != 200:
+            response.raise_for_status()
+    
+    def _parse_my_publications_response(self, response) -> List[Publication]:
+        """Parse My Publications API response."""
+        if self.config.format == "bibtex":
+            parser = BibtexParser(self.logger)
+            return parser.parse_bibtex_response(response.text)
+        else:
+            items = response.json()
+            publications = []
+            for item in items:
+                pub = self._parse_zotero_item(item)
+                if pub:
+                    pub.source = "Zotero My Publications"
+                    publications.append(pub)
+            return publications
+    
+    def _handle_my_publications_error(self, error: Exception) -> None:
+        """Handle errors from My Publications endpoint."""
+        if isinstance(error, requests.ConnectionError):
+            raise ValueError(
+                f"Zotero My Publications connection failed: Network error. "
+                f"Please check your internet connection."
+            ) from error
+        elif isinstance(error, requests.HTTPError):
+            error_msg = str(error).lower()
+            if "403" in error_msg or "forbidden" in error_msg:
+                raise ValueError(
+                    f"Zotero My Publications authentication failed: Invalid API key. "
+                    f"Please check your API key at: https://www.zotero.org/settings/keys"
+                ) from error
+            else:
+                raise ValueError(f"Failed to fetch My Publications: {error}") from error
+        else:
+            raise ValueError(f"Failed to fetch My Publications: {error}") from error
+
 
     def _is_publication_item(self, item_type: str) -> bool:
         """Check if Zotero item type represents a publication."""

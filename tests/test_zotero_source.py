@@ -734,3 +734,324 @@ class TestZoteroSource:
         assert book_pub.journal is None  # Books don't have journals
         assert book_pub.publication_type == "book"
         assert book_pub.source == "Zotero"
+
+
+class TestZoteroMyPublicationsEndpoint:
+    """Test Zotero My Publications endpoint support."""
+
+    @patch("puby.sources.requests.get")
+    @patch("puby.sources.zotero.Zotero")
+    def test_fetch_my_publications_success(self, mock_zotero, mock_requests_get):
+        """Test successful fetch from My Publications endpoint."""
+        # Mock Zotero client - needed for initialization but won't be used for My Publications
+        mock_client = Mock()
+        mock_client.collections.return_value = []
+        mock_zotero.return_value = mock_client
+
+        # Mock API response for My Publications endpoint
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = [
+            {
+                "data": {
+                    "itemType": "journalArticle",
+                    "title": "My Research Paper",
+                    "creators": [
+                        {
+                            "creatorType": "author",
+                            "firstName": "John",
+                            "lastName": "Author",
+                        }
+                    ],
+                    "date": "2023",
+                    "publicationTitle": "Research Journal",
+                    "DOI": "10.1234/research.2023.123",
+                }
+            }
+        ]
+        mock_requests_get.return_value = mock_response
+
+        # Create source with My Publications enabled
+        config = ZoteroConfig(
+            api_key="abcdef1234567890abcdef12", 
+            group_id="123456", 
+            library_type="user",
+            use_my_publications=True
+        )
+        source = ZoteroSource(config)
+        
+        publications = source.fetch()
+
+        # Verify API endpoint was called correctly
+        mock_requests_get.assert_called_once_with(
+            "https://api.zotero.org/users/123456/publications/items",
+            headers={
+                "Zotero-API-Key": "abcdef1234567890abcdef12",
+                "Accept": "application/json"
+            },
+            params={"format": "json", "limit": 100, "start": 0}
+        )
+
+        # Verify publication was parsed correctly
+        assert len(publications) == 1
+        pub = publications[0]
+        assert pub.title == "My Research Paper"
+        assert len(pub.authors) == 1
+        assert pub.authors[0].name == "John Author"
+        assert pub.year == 2023
+        assert pub.journal == "Research Journal"
+        assert pub.doi == "10.1234/research.2023.123"
+        assert pub.source == "Zotero My Publications"
+
+    @patch("puby.sources.requests.get")
+    @patch("puby.sources.zotero.Zotero")
+    def test_fetch_my_publications_with_pagination(self, mock_zotero, mock_requests_get):
+        """Test My Publications endpoint with pagination."""
+        # Mock Zotero client
+        mock_client = Mock()
+        mock_client.collections.return_value = []
+        mock_zotero.return_value = mock_client
+
+        # Mock paginated API responses
+        # First page returns 100 items (full page), second page returns empty
+        first_page_items = []
+        for i in range(100):  # Full page of 100 items
+            first_page_items.append({
+                "data": {
+                    "itemType": "journalArticle",
+                    "title": f"Publication {i+1}",
+                    "creators": [
+                        {"creatorType": "author", "firstName": "A", "lastName": f"Author{i+1}"}
+                    ],
+                    "date": "2023",
+                }
+            })
+            
+        responses = [
+            # First page - full page to trigger pagination
+            Mock(status_code=200, json=lambda: first_page_items),
+            # Second page (empty)
+            Mock(status_code=200, json=lambda: [])
+        ]
+        mock_requests_get.side_effect = responses
+
+        # Create source with My Publications enabled
+        config = ZoteroConfig(
+            api_key="abcdef1234567890abcdef12", 
+            group_id="123456", 
+            library_type="user",
+            use_my_publications=True
+        )
+        source = ZoteroSource(config)
+        
+        publications = source.fetch()
+
+        # Verify both API calls were made
+        assert mock_requests_get.call_count == 2
+        
+        # First call
+        first_call = mock_requests_get.call_args_list[0]
+        assert first_call[0][0] == "https://api.zotero.org/users/123456/publications/items"
+        assert first_call[1]["params"]["start"] == 0
+        
+        # Second call (next page)
+        second_call = mock_requests_get.call_args_list[1]
+        assert second_call[0][0] == "https://api.zotero.org/users/123456/publications/items"
+        assert second_call[1]["params"]["start"] == 100
+
+        # Verify publications were parsed
+        assert len(publications) == 100
+        assert publications[0].title == "Publication 1"
+        assert publications[99].title == "Publication 100"
+
+    @patch("puby.sources.requests.get")
+    @patch("puby.sources.zotero.Zotero")
+    def test_fetch_my_publications_endpoint_not_available(self, mock_zotero, mock_requests_get):
+        """Test fallback to regular library when My Publications endpoint not available."""
+        # Mock Zotero client
+        mock_client = Mock()
+        mock_client.collections.return_value = []
+        mock_client.everything.return_value = [
+            {
+                "data": {
+                    "itemType": "journalArticle",
+                    "title": "Library Publication",
+                    "creators": [
+                        {"creatorType": "author", "firstName": "Library", "lastName": "Author"}
+                    ],
+                    "date": "2023",
+                }
+            }
+        ]
+        mock_client.top.return_value = []
+        mock_zotero.return_value = mock_client
+
+        # Mock My Publications endpoint returning 404
+        mock_response = Mock()
+        mock_response.status_code = 404
+        mock_requests_get.return_value = mock_response
+
+        # Create source with My Publications enabled
+        config = ZoteroConfig(
+            api_key="abcdef1234567890abcdef12", 
+            group_id="123456", 
+            library_type="user",
+            use_my_publications=True
+        )
+        source = ZoteroSource(config)
+        
+        publications = source.fetch()
+
+        # Verify My Publications endpoint was tried first
+        mock_requests_get.assert_called_once_with(
+            "https://api.zotero.org/users/123456/publications/items",
+            headers={
+                "Zotero-API-Key": "abcdef1234567890abcdef12",
+                "Accept": "application/json"
+            },
+            params={"format": "json", "limit": 100, "start": 0}
+        )
+
+        # Verify fallback to regular library
+        mock_client.everything.assert_called_once()
+
+        # Verify publication from regular library was returned
+        assert len(publications) == 1
+        assert publications[0].title == "Library Publication"
+        assert publications[0].source == "Zotero"
+
+    @patch("puby.sources.requests.get")
+    @patch("puby.sources.zotero.Zotero")
+    def test_fetch_my_publications_bibtex_format(self, mock_zotero, mock_requests_get):
+        """Test My Publications endpoint with BibTeX format."""
+        # Mock Zotero client
+        mock_client = Mock()
+        mock_client.collections.return_value = []
+        mock_zotero.return_value = mock_client
+
+        # Mock BibTeX response
+        bibtex_content = """@article{author2023research,
+    title={My Research Paper},
+    author={Author, John},
+    journal={Research Journal},
+    year={2023},
+    publisher={Academic Press},
+    doi={10.1234/research.2023.123}
+}"""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.text = bibtex_content
+        mock_requests_get.return_value = mock_response
+
+        # Create source with My Publications in BibTeX format
+        config = ZoteroConfig(
+            api_key="abcdef1234567890abcdef12", 
+            group_id="123456", 
+            library_type="user",
+            use_my_publications=True,
+            format="bibtex"
+        )
+        source = ZoteroSource(config)
+        
+        publications = source.fetch()
+
+        # Verify BibTeX endpoint was called
+        mock_requests_get.assert_called_once_with(
+            "https://api.zotero.org/users/123456/publications/items",
+            headers={
+                "Zotero-API-Key": "abcdef1234567890abcdef12",
+                "Accept": "application/x-bibtex"
+            },
+            params={"format": "bibtex", "limit": 100, "start": 0}
+        )
+
+        # Verify publication was parsed from BibTeX
+        assert len(publications) == 1
+        pub = publications[0]
+        assert pub.title == "My Research Paper"
+        assert pub.authors[0].name == "John Author"
+        assert pub.journal == "Research Journal"
+        assert pub.year == 2023
+        assert pub.doi == "10.1234/research.2023.123"
+        assert pub.source == "Zotero My Publications"
+
+    @patch("puby.sources.requests.get")
+    @patch("puby.sources.zotero.Zotero")
+    def test_fetch_my_publications_group_library_unsupported(self, mock_zotero, mock_requests_get):
+        """Test that My Publications is only supported for user libraries."""
+        # Mock Zotero client
+        mock_client = Mock()
+        mock_client.collections.return_value = []
+        mock_client.everything.return_value = []
+        mock_client.top.return_value = []
+        mock_zotero.return_value = mock_client
+
+        # Create source with group library and My Publications enabled
+        config = ZoteroConfig(
+            api_key="abcdef1234567890abcdef12", 
+            group_id="123456", 
+            library_type="group",  # Group library
+            use_my_publications=True
+        )
+        source = ZoteroSource(config)
+        
+        publications = source.fetch()
+
+        # Verify My Publications endpoint was NOT called
+        mock_requests_get.assert_not_called()
+
+        # Verify regular library method was used instead
+        mock_client.everything.assert_called_once()
+
+    @patch("puby.sources.requests.get")
+    @patch("puby.sources.zotero.Zotero")
+    def test_fetch_my_publications_authentication_error(self, mock_zotero, mock_requests_get):
+        """Test My Publications endpoint with authentication error."""
+        # Mock Zotero client
+        mock_client = Mock()
+        mock_client.collections.return_value = []
+        mock_zotero.return_value = mock_client
+
+        # Mock authentication error response
+        mock_response = Mock()
+        mock_response.status_code = 403
+        mock_response.text = "Forbidden"
+        mock_requests_get.return_value = mock_response
+
+        # Create source with My Publications enabled
+        config = ZoteroConfig(
+            api_key="invalidkey567890123456ab", 
+            group_id="123456", 
+            library_type="user",
+            use_my_publications=True
+        )
+        source = ZoteroSource(config)
+        
+        # Should raise authentication error
+        with pytest.raises(ValueError, match="authentication failed.*API key"):
+            source.fetch()
+
+    @patch("puby.sources.requests.get")
+    @patch("puby.sources.zotero.Zotero")
+    def test_fetch_my_publications_network_error(self, mock_zotero, mock_requests_get):
+        """Test My Publications endpoint with network error."""
+        # Mock Zotero client
+        mock_client = Mock()
+        mock_client.collections.return_value = []
+        mock_zotero.return_value = mock_client
+
+        # Mock network error
+        mock_requests_get.side_effect = requests.ConnectionError("Network error")
+
+        # Create source with My Publications enabled
+        config = ZoteroConfig(
+            api_key="abcdef1234567890abcdef12", 
+            group_id="123456", 
+            library_type="user",
+            use_my_publications=True
+        )
+        source = ZoteroSource(config)
+        
+        # Should raise network error
+        with pytest.raises(ValueError, match="Network error"):
+            source.fetch()
