@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #3: feat: implement core publication data types
 - [ ] #4: feat: implement ORCID API parser
 - [ ] #5: feat: implement basic Zotero API client
 - [ ] #6: feat: implement publication matching and comparison
@@ -11,5 +10,6 @@
 - [ ] #10: feat: add Pure research portal support
 
 ## DOING (Current Work)
+- [x] #3: feat: implement core publication data types (branch: feat-core-data-types-3)
 
 ## DONE (Completed)
