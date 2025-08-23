@@ -15,7 +15,7 @@ class TestPureSource:
         """Test initialization with valid Pure URL."""
         url = "https://research.example.edu/en/persons/john-doe"
         source = PureSource(url)
-        assert source.pure_url == url
+        assert source.url == url
 
     def test_init_with_invalid_url(self):
         """Test initialization with invalid URL."""

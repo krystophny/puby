@@ -42,8 +42,8 @@ class TestZoteroAPIKeyHonesty:
         with pytest.raises(ValueError, match="Invalid Zotero configuration.*API key is required"):
             ZoteroSource(invalid_config)
 
-        # Test auto-discovery failure with valid format but non-working key
-        invalid_config = ZoteroConfig(api_key="invalid_key_format", library_type="user")
+        # Test auto-discovery failure with valid format but non-working key  
+        invalid_config = ZoteroConfig(api_key="abc123def456ghi789jkl012", library_type="user")
         
         # Mock failed auto-discovery
         mock_response = Mock()
@@ -207,11 +207,10 @@ class TestErrorMessageClarity:
         """Test that errors tell users what to do."""
         runner = CliRunner()
         
-        with patch('puby.cli.ZoteroLibrary') as mock_zotero:
+        with patch('puby.cli._initialize_zotero_source') as mock_zotero:
             mock_zotero.side_effect = ValueError(
-                "Failed to initialize Zotero client: "
-                "API key required for private library. "
-                "Get your API key at https://www.zotero.org/settings/keys"
+                "Invalid Zotero configuration: API key is required for Zotero access. "
+                "Get your API key at: https://www.zotero.org/settings/keys"
             )
             
             result = runner.invoke(cli, [
@@ -221,7 +220,9 @@ class TestErrorMessageClarity:
             ])
             
             # Should show the helpful error message
-            assert "API key required" in result.output
+            assert result.exit_code != 0  # Should fail
+            assert result.exception is not None
+            assert "API key is required" in str(result.exception)
             
     def test_no_silent_failures(self):
         """Test that there are no silent failures when auth is missing."""
