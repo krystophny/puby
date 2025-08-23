@@ -233,22 +233,155 @@ class Publication:
         # but return a fallback (this should never happen in practice)
         return f"{base_key}z"
 
-    def matches(self, other: "Publication", threshold: float = 0.8) -> bool:
-        """Check if this publication matches another based on similarity."""
-        # Simple matching based on DOI
+    def matches(self, other: "Publication", threshold: float = 0.7) -> bool:
+        """Check if this publication matches another based on fuzzy similarity.
+        
+        Args:
+            other: Another publication to compare against
+            threshold: Similarity threshold (0.0-1.0), default 70%
+            
+        Returns:
+            bool: True if publications match based on similarity criteria
+        """
+        # Exact matching based on DOI (highest priority)
         if self.doi and other.doi:
             return self.doi.lower() == other.doi.lower()
 
-        # Match based on title similarity and year
+        # Fuzzy matching based on title similarity and year
         if self.title and other.title:
-            title_similarity = self._calculate_similarity(
-                self.title.lower(), other.title.lower()
+            # Normalize titles for better comparison
+            norm_title1 = self._normalize_title(self.title)
+            norm_title2 = self._normalize_title(other.title)
+            
+            if not norm_title1 or not norm_title2:
+                return False
+                
+            # Calculate title similarity with enhanced algorithm
+            title_similarity = self._calculate_fuzzy_similarity(
+                norm_title1, norm_title2
             )
-            year_match = self.year == other.year if self.year and other.year else True
-
-            return title_similarity >= threshold and year_match
+            
+            # Check year match (exact or both missing)
+            year_match = (
+                self.year == other.year if self.year and other.year 
+                else not (self.year or other.year)
+            )
+            
+            # Enhanced matching: title similarity + optional year consideration
+            base_match = title_similarity >= threshold
+            if self.year and other.year:
+                # If both have years, they should match
+                return base_match and year_match
+            else:
+                # If one or both missing year, rely more on title similarity
+                return base_match
 
         return False
+
+    @staticmethod
+    def _normalize_title(title: str) -> str:
+        """Normalize title for fuzzy matching.
+        
+        Removes formatting, normalizes case and whitespace, handles LaTeX.
+        
+        Args:
+            title: Raw title string
+            
+        Returns:
+            str: Normalized title for comparison
+        """
+        if not title:
+            return ""
+            
+        # Convert to lowercase
+        normalized = title.lower()
+        
+        # Remove common LaTeX formatting
+        latex_patterns = [
+            (r'\\textbf\{([^}]+)\}', r'\1'),  # \textbf{text} -> text
+            (r'\\textit\{([^}]+)\}', r'\1'),  # \textit{text} -> text
+            (r'\\emph\{([^}]+)\}', r'\1'),    # \emph{text} -> text
+            (r'\\text\{([^}]+)\}', r'\1'),    # \text{text} -> text
+            (r'\\[a-zA-Z]+\{([^}]*)\}', r'\1'),  # Generic \command{text} -> text
+            (r'\{([^}]+)\}', r'\1'),          # {text} -> text
+            (r'\\[a-zA-Z]+', ''),             # Remove remaining LaTeX commands
+        ]
+        
+        for pattern, replacement in latex_patterns:
+            normalized = re.sub(pattern, replacement, normalized)
+        
+        # Remove HTML entities and tags
+        html_patterns = [
+            (r'&[a-zA-Z]+;', ' '),           # &nbsp; etc.
+            (r'<[^>]+>', ' '),               # HTML tags
+        ]
+        
+        for pattern, replacement in html_patterns:
+            normalized = re.sub(pattern, replacement, normalized)
+        
+        # Normalize punctuation and whitespace
+        normalized = re.sub(r'[^\w\s-]', ' ', normalized)  # Keep letters, digits, spaces, hyphens
+        normalized = re.sub(r'\s+', ' ', normalized)       # Collapse multiple spaces
+        normalized = normalized.strip()
+        
+        return normalized
+
+    def _calculate_fuzzy_similarity(self, title1: str, title2: str) -> float:
+        """Calculate enhanced fuzzy similarity between two normalized titles.
+        
+        Uses word overlap with substring matching for longer titles.
+        
+        Args:
+            title1: First normalized title
+            title2: Second normalized title
+            
+        Returns:
+            float: Similarity score (0.0-1.0)
+        """
+        if not title1 or not title2:
+            return 0.0
+        
+        # Split into words
+        words1 = set(title1.split())
+        words2 = set(title2.split())
+        
+        if not words1 or not words2:
+            return 0.0
+        
+        # Calculate basic Jaccard similarity (word overlap)
+        intersection = len(words1 & words2)
+        union = len(words1 | words2)
+        jaccard_score = intersection / union if union > 0 else 0.0
+        
+        # Enhanced similarity for longer titles (>15 chars)
+        # Check both substring containment and word-level containment
+        if len(title1) > 15 or len(title2) > 15:
+            # Method 1: Direct substring containment 
+            shorter, longer = (title1, title2) if len(title1) <= len(title2) else (title2, title1)
+            
+            if shorter in longer:
+                # Very high similarity if one title contains the other
+                containment_score = len(shorter) / len(longer)
+                enhanced_containment = min(1.0, containment_score + 0.2)  # Add flat bonus
+                return max(jaccard_score, enhanced_containment)
+            
+            # Method 2: Check if all words from shorter title are in longer
+            shorter_words, longer_words = (words1, words2) if len(words1) <= len(words2) else (words2, words1)
+            
+            if shorter_words.issubset(longer_words):
+                # All words from shorter title are in longer title
+                # Strong boost for perfect word subset cases
+                word_containment_score = len(shorter_words) / len(longer_words)
+                enhanced_score = min(1.0, word_containment_score + 0.4)  # Add flat bonus
+                return max(jaccard_score, enhanced_score)
+        
+        # For similar-length titles, boost Jaccard score if intersection is significant
+        if intersection >= 2 and intersection / min(len(words1), len(words2)) >= 0.5:
+            # Boost score when at least 2 words match and 50%+ of smaller set matches
+            boost_factor = 1.2 if intersection >= 3 else 1.1
+            return min(1.0, jaccard_score * boost_factor)
+        
+        return jaccard_score
 
     @staticmethod
     def _calculate_similarity(s1: str, s2: str) -> float:
