@@ -86,7 +86,8 @@ class ORCIDSource(PublicationSource):
         try:
             response = requests.get(url, headers=headers)
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            return data if isinstance(data, dict) else None
         except requests.RequestException as e:
             self.logger.error(f"Error fetching work detail: {e}")
             return None
@@ -200,7 +201,7 @@ class PureSource(PublicationSource):
 
 class ZoteroLibrary(PublicationSource):
     """Fetch publications from Zotero library.
-    
+
     NOTE: This is legacy implementation. Use ZoteroSource instead for new code.
     """
 
@@ -320,11 +321,11 @@ class ZoteroSource(PublicationSource):
         if not config.is_valid():
             errors = ", ".join(config.validation_errors())
             raise ValueError(f"Invalid Zotero configuration: {errors}")
-        
+
         self.config = config
         self.logger = logging.getLogger(__name__)
-        
-        # Initialize Zotero API client  
+
+        # Initialize Zotero API client
         try:
             if self.config.library_type == "group":
                 if not self.config.group_id:
@@ -339,11 +340,9 @@ class ZoteroSource(PublicationSource):
                         "Please provide your numeric user ID in the group_id field."
                     )
                 library_id = self.config.group_id
-            
+
             self.zot = zotero.Zotero(
-                library_id, 
-                self.config.library_type, 
-                self.config.api_key
+                library_id, self.config.library_type, self.config.api_key
             )
         except Exception as e:
             raise ValueError(f"Failed to initialize Zotero client: {e}") from e
@@ -356,7 +355,7 @@ class ZoteroSource(PublicationSource):
             # Use everything() to handle pagination automatically
             # This fetches all items in batches, handling Zotero's pagination
             items = self.zot.everything(self.zot.top())
-            
+
             self.logger.info(f"Retrieved {len(items)} items from Zotero")
 
             for item in items:
@@ -380,7 +379,7 @@ class ZoteroSource(PublicationSource):
             item_type = data.get("itemType", "")
             if item_type not in [
                 "journalArticle",
-                "book", 
+                "book",
                 "bookSection",
                 "conferencePaper",
                 "thesis",
@@ -401,7 +400,7 @@ class ZoteroSource(PublicationSource):
                 if creator.get("creatorType") == "author":
                     first_name = creator.get("firstName", "").strip()
                     last_name = creator.get("lastName", "").strip()
-                    
+
                     if last_name or first_name:
                         full_name = f"{first_name} {last_name}".strip()
                         authors.append(

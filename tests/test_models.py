@@ -187,9 +187,9 @@ class TestZoteroConfig:
     def test_zotero_config_validation_user_type_with_user_id(self):
         """Test user library type validation with user ID."""
         config = ZoteroConfig(
-            api_key="valid_key", 
+            api_key="valid_key",
             group_id="12345",  # This is user_id for user libraries
-            library_type="user"
+            library_type="user",
         )
         assert config.is_valid()
         assert len(config.validation_errors()) == 0

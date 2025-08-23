@@ -263,7 +263,9 @@ class AnalysisReporter:
 
         return recommendations
 
-    def print_sync_recommendations(self, recommendations: List[SyncRecommendation]) -> None:
+    def print_sync_recommendations(
+        self, recommendations: List[SyncRecommendation]
+    ) -> None:
         """Print formatted sync recommendations.
 
         Args:
@@ -317,7 +319,9 @@ class AnalysisReporter:
         click.echo("\nMissing Publications:")
         self.console_reporter.report_missing(missing_publications)
 
-    def _print_duplicates_section(self, duplicate_groups: List[List[Publication]]) -> None:
+    def _print_duplicates_section(
+        self, duplicate_groups: List[List[Publication]]
+    ) -> None:
         """Print duplicates section.
 
         Args:
@@ -326,7 +330,9 @@ class AnalysisReporter:
         click.echo("\nDuplicate Publications:")
         self.console_reporter.report_duplicates(duplicate_groups)
 
-    def _print_potential_matches_section(self, potential_matches: List[PotentialMatch]) -> None:
+    def _print_potential_matches_section(
+        self, potential_matches: List[PotentialMatch]
+    ) -> None:
         """Print potential matches section.
 
         Args:

@@ -22,10 +22,7 @@ class MatchResult:
         match_status = "Match" if self.is_match else "No Match"
         confidence_pct = int(self.confidence * 100)
         reasons = ", ".join(self.match_reasons) if self.match_reasons else "none"
-        return (
-            f"{match_status} ({confidence_pct}% confidence) - "
-            f"Reasons: {reasons}"
-        )
+        return f"{match_status} ({confidence_pct}% confidence) - " f"Reasons: {reasons}"
 
 
 @dataclass
@@ -57,9 +54,7 @@ class PublicationMatcher:
         self.year_tolerance = year_tolerance
         self.potential_threshold = potential_threshold
 
-    def match_publications(
-        self, pub1: Publication, pub2: Publication
-    ) -> MatchResult:
+    def match_publications(self, pub1: Publication, pub2: Publication) -> MatchResult:
         """Match two publications and return detailed result."""
         confidence = 0.0
         reasons = []
@@ -187,7 +182,8 @@ class PublicationMatcher:
 
                 # If it's a potential match but not exact
                 if (
-                    self.potential_threshold <= result.confidence
+                    self.potential_threshold
+                    <= result.confidence
                     < self.similarity_threshold
                 ):
                     potential_matches.append(
@@ -210,8 +206,8 @@ class PublicationMatcher:
     def _normalize_text(self, text: str) -> str:
         """Normalize text for comparison."""
         # Remove punctuation, extra spaces, convert to lowercase
-        normalized = re.sub(r'[^\w\s]', ' ', text.lower())
-        normalized = re.sub(r'\s+', ' ', normalized).strip()
+        normalized = re.sub(r"[^\w\s]", " ", text.lower())
+        normalized = re.sub(r"\s+", " ", normalized).strip()
         return normalized
 
     def _calculate_title_similarity(self, title1: str, title2: str) -> float:
@@ -243,7 +239,9 @@ class PublicationMatcher:
 
         return jaccard * len_ratio
 
-    def _calculate_author_similarity(self, authors1: List[Author], authors2: List[Author]) -> float:
+    def _calculate_author_similarity(
+        self, authors1: List[Author], authors2: List[Author]
+    ) -> float:
         """Calculate author similarity with name variation handling."""
         if not authors1 or not authors2:
             return 0.0
