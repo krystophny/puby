@@ -33,17 +33,10 @@ class Author:
         if not self.name or not self.name.strip():
             errors.append("Name is required")
 
-        if self.orcid and not self._is_valid_orcid(self.orcid):
+        if self.orcid and not _is_valid_orcid(self.orcid):
             errors.append("ORCID ID format is invalid")
 
         return errors
-
-    @staticmethod
-    def _is_valid_orcid(orcid: str) -> bool:
-        """Validate ORCID ID format."""
-        pattern = r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$"
-        return bool(re.match(pattern, orcid))
-
 
 @dataclass
 class Publication:
@@ -227,13 +220,12 @@ class ORCIDConfig:
 
         if not self.orcid_id or not self.orcid_id.strip():
             errors.append("ORCID ID is required")
-        elif not self._is_valid_orcid(self.orcid_id):
+        elif not _is_valid_orcid(self.orcid_id):
             errors.append("ORCID ID must follow format 0000-0000-0000-0000")
 
         return errors
 
-    @staticmethod
-    def _is_valid_orcid(orcid: str) -> bool:
-        """Validate ORCID ID format."""
-        pattern = r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$"
-        return bool(re.match(pattern, orcid))
+def _is_valid_orcid(orcid: str) -> bool:
+    """Validate ORCID ID format."""
+    pattern = r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$"
+    return bool(re.match(pattern, orcid))

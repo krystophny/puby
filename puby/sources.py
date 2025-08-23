@@ -490,14 +490,12 @@ class PureSource(PublicationSource):
 
     def _extract_base_domain(self) -> str:
         """Extract base domain from Pure URL."""
-        from urllib.parse import urlparse
         parsed = urlparse(self.pure_url)
         return f"{parsed.scheme}://{parsed.netloc}"
 
     def _extract_person_id(self) -> str:
         """Extract person identifier from Pure URL."""
         # Pattern: /en/persons/person-identifier or /persons/person-identifier
-        import re
         match = re.search(r"/persons/([^/?]+)", self.pure_url)
         if match:
             return match.group(1)
