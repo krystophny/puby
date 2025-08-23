@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #33: feat: add BibTeX export for missing publications
 - [ ] #21: fix: inconsistent error handling between fetch and check commands
 - [ ] #23: fix: test suite regression - message mismatch
 - [ ] #25: refactor: sources.py exceeds size limit
@@ -10,6 +9,7 @@
 ## DOING (Current Work)
 
 ## DONE (Completed)
+- [x] #33: feat: add BibTeX export for missing publications (PR #46)
 - [x] #32: feat: add fuzzy title matching with configurable threshold (PR #45)
 - [x] #31: feat: add standardized citation key generation (PR #44)
 - [x] #42: fix: test suite failures after PR #41 source refactoring (PR #43)

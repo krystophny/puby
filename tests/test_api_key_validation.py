@@ -1,6 +1,5 @@
 """Test API key format validation for Zotero."""
 
-import pytest
 from puby.models import ZoteroConfig
 
 
@@ -18,7 +17,7 @@ class TestZoteroAPIKeyFormatValidation:
             "123456789012345678901234",  # All numbers
             "A1b2C3d4E5f6G7h8I9j0K1l2",  # Mixed case and numbers
         ]
-        
+
         for key in valid_keys:
             config = ZoteroConfig(api_key=key, library_type="user")
             assert config.is_valid(), f"Key {key} should be valid"
@@ -68,7 +67,7 @@ class TestZoteroAPIKeyFormatValidation:
             ("P9NiFoyLeZu2bZNvvuQPDWs🔑", "contains emoji"),
             ("P9NiFoyLeZu2bZNvvuQPDWsâ", "contains unicode"),
         ]
-        
+
         for key, description in invalid_cases:
             config = ZoteroConfig(api_key=key, library_type="user")
             assert not config.is_valid(), f"Key should be invalid: {description}"
@@ -76,11 +75,13 @@ class TestZoteroAPIKeyFormatValidation:
             assert len(errors) > 0, f"Should have validation errors: {description}"
             # Should have specific format error, not just "required" error
             format_error_found = any(
-                "format" in error.lower() or "invalid" in error.lower() 
+                "format" in error.lower() or "invalid" in error.lower()
                 for error in errors
             )
             if key.strip():  # Not empty/whitespace - should have format error
-                assert format_error_found, f"Should have format error for: {description}"
+                assert (
+                    format_error_found
+                ), f"Should have format error for: {description}"
 
     def test_api_key_format_error_message_clarity(self):
         """Test that format validation provides clear error messages."""
@@ -88,14 +89,15 @@ class TestZoteroAPIKeyFormatValidation:
         config = ZoteroConfig(api_key="invalid_key_format", library_type="user")
         assert not config.is_valid()
         errors = config.validation_errors()
-        
+
         # Should have specific format validation message
-        assert any("format" in error.lower() for error in errors), \
-            "Should mention format in error message"
-        assert any("24" in error for error in errors), \
-            "Should mention expected length"
-        assert any("alphanumeric" in error.lower() for error in errors), \
-            "Should mention character requirements"
+        assert any(
+            "format" in error.lower() for error in errors
+        ), "Should mention format in error message"
+        assert any("24" in error for error in errors), "Should mention expected length"
+        assert any(
+            "alphanumeric" in error.lower() for error in errors
+        ), "Should mention character requirements"
 
     def test_edge_case_api_keys(self):
         """Test edge cases that might appear valid but aren't."""
@@ -107,15 +109,17 @@ class TestZoteroAPIKeyFormatValidation:
             "\0P9NiFoyLeZu2bZNvvuQPDWs",  # Leading null
             "P9NiFoyLeZu2bZNvvuQPDW💖d",  # Unicode heart in middle
         ]
-        
+
         for key in edge_cases:
             config = ZoteroConfig(api_key=key, library_type="user")
             # These should all be invalid due to format requirements
             if len(key) == 24 and key.isalnum():
                 # If it's exactly 24 alphanumeric chars, it should be valid
-                assert config.is_valid(), f"Valid 24-char alphanumeric key rejected: {repr(key)}"
+                assert (
+                    config.is_valid()
+                ), f"Valid 24-char alphanumeric key rejected: {key!r}"
             else:
-                assert not config.is_valid(), f"Invalid key accepted: {repr(key)}"
+                assert not config.is_valid(), f"Invalid key accepted: {key!r}"
 
     def test_api_key_validation_with_other_config_errors(self):
         """Test API key validation doesn't interfere with other validation."""
@@ -123,11 +127,11 @@ class TestZoteroAPIKeyFormatValidation:
         config = ZoteroConfig(api_key="short", library_type="group")
         assert not config.is_valid()
         errors = config.validation_errors()
-        
+
         # Should have both API key format error and group ID error
         api_key_error = any("format" in error.lower() for error in errors)
         group_id_error = any("group id" in error.lower() for error in errors)
-        
+
         assert api_key_error, "Should have API key format error"
         assert group_id_error, "Should have group ID error"
 
@@ -147,6 +151,6 @@ class TestZoteroAPIKeyFormatValidation:
         assert not config.is_valid()
         errors = config.validation_errors()
         assert any("format" in error.lower() for error in errors)
-        
+
         # The validation should not strip - users should provide exact key
         # This ensures we don't accidentally accept malformed keys

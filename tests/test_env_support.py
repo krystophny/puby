@@ -5,11 +5,10 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
 from click.testing import CliRunner
 
 from puby.cli import cli
-from puby.env import load_api_keys, get_api_key
+from puby.env import get_api_key, load_api_keys
 
 
 class TestEnvSupport:
@@ -21,7 +20,7 @@ class TestEnvSupport:
             # Create .env file with API key
             env_file = Path(tmpdir) / ".env"
             env_file.write_text("ZOTERO_API_KEY=test_key_from_env\n")
-            
+
             # Change to temp directory and load
             original_cwd = os.getcwd()
             # Clear any existing environment variable
@@ -42,7 +41,7 @@ class TestEnvSupport:
             # Create .env file with API key
             env_file = Path(tmpdir) / ".env"
             env_file.write_text("ZOTERO_API_KEY=test_key_from_home\n")
-            
+
             # Mock home directory and current directory with no .env
             with patch("pathlib.Path.home", return_value=Path(tmpdir)):
                 with patch("pathlib.Path.cwd", return_value=Path(tmpdir + "_fake")):
@@ -57,10 +56,10 @@ class TestEnvSupport:
                 # Create .env in both locations
                 home_env = Path(homedir) / ".env"
                 home_env.write_text("ZOTERO_API_KEY=home_key\n")
-                
+
                 current_env = Path(tmpdir) / ".env"
                 current_env.write_text("ZOTERO_API_KEY=current_key\n")
-                
+
                 # Mock both directories and clear environment
                 with patch("pathlib.Path.home", return_value=Path(homedir)):
                     with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
@@ -81,7 +80,7 @@ class TestEnvSupport:
             # Create .env file
             env_file = Path(tmpdir) / ".env"
             env_file.write_text("ZOTERO_API_KEY=env_file_key\n")
-            
+
             original_cwd = os.getcwd()
             try:
                 os.chdir(tmpdir)
@@ -97,7 +96,7 @@ class TestEnvSupport:
             # Create .env file
             env_file = Path(tmpdir) / ".env"
             env_file.write_text("ZOTERO_API_KEY=env_file_key\n")
-            
+
             # Mock current directory and clear environment
             with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
                 with patch.dict(os.environ, {}, clear=True):
@@ -123,36 +122,38 @@ class TestEnvSupport:
     def test_cli_uses_env_file_for_zotero(self, mock_zotero, mock_client):
         """Test that CLI loads API key from .env file."""
         runner = CliRunner()
-        
+
         # Clear existing environment variable
         original_env = os.environ.pop("ZOTERO_API_KEY", None)
         try:
             with runner.isolated_filesystem():
                 # Create .env file
                 Path(".env").write_text("ZOTERO_API_KEY=abcdef1234567890abcdef78\n")
-                
+
                 # Mock Zotero source
                 mock_zotero_instance = Mock()
                 mock_zotero_instance.fetch.return_value = []
                 mock_zotero.return_value = mock_zotero_instance
-                
+
                 # Mock client
                 mock_client_instance = Mock()
                 mock_client.return_value = mock_client_instance
                 mock_client_instance.fetch_publications.return_value = []
-                
+
                 # Run command without --api-key
                 # The isolated filesystem should ensure we read the .env file we created
-                result = runner.invoke(
+                runner.invoke(
                     cli,
                     [
                         "check",
-                        "--orcid", "https://orcid.org/0000-0000-0000-0000",
-                        "--zotero", "12345",
+                        "--orcid",
+                        "https://orcid.org/0000-0000-0000-0000",
+                        "--zotero",
+                        "12345",
                     ],
-                    catch_exceptions=False
+                    catch_exceptions=False,
                 )
-                
+
                 # Should have called _initialize_zotero_source with API key from .env
                 # Check that it was called with the right parameters
                 assert mock_zotero.called
@@ -169,33 +170,36 @@ class TestEnvSupport:
     def test_cli_command_line_overrides_env(self, mock_zotero, mock_client):
         """Test that CLI command line --api-key overrides .env file."""
         runner = CliRunner()
-        
+
         with runner.isolated_filesystem():
             # Create .env file
             Path(".env").write_text("ZOTERO_API_KEY=env1234567890abcdef1234\n")
-            
+
             # Mock Zotero source
             mock_zotero_instance = Mock()
             mock_zotero_instance.fetch.return_value = []
             mock_zotero.return_value = mock_zotero_instance
-            
+
             # Mock client
             mock_client_instance = Mock()
             mock_client.return_value = mock_client_instance
             mock_client_instance.fetch_publications.return_value = []
-            
+
             # Run command with --api-key
-            result = runner.invoke(
+            runner.invoke(
                 cli,
                 [
                     "check",
-                    "--orcid", "https://orcid.org/0000-0000-0000-0000",
-                    "--zotero", "12345",
-                    "--api-key", "abcdef1234567890abcdef90",
+                    "--orcid",
+                    "https://orcid.org/0000-0000-0000-0000",
+                    "--zotero",
+                    "12345",
+                    "--api-key",
+                    "abcdef1234567890abcdef90",
                 ],
-                catch_exceptions=False
+                catch_exceptions=False,
             )
-            
+
             # Should have called _initialize_zotero_source with CLI API key
             # Check that it was called with the right parameters
             assert mock_zotero.called
@@ -214,7 +218,7 @@ class TestEnvSupport:
                 "OTHER_VAR=other_value\n"
                 "EMPTY_VAR=\n"
             )
-            
+
             # Mock current directory and clear environment
             with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
                 with patch.dict(os.environ, {}, clear=True):
@@ -229,10 +233,9 @@ class TestEnvSupport:
             # Create .env file with quoted values
             env_file = Path(tmpdir) / ".env"
             env_file.write_text(
-                'ZOTERO_API_KEY="quoted_key"\n'
-                "SINGLE_QUOTED='single_quoted_key'\n"
+                'ZOTERO_API_KEY="quoted_key"\n' "SINGLE_QUOTED='single_quoted_key'\n"
             )
-            
+
             # Mock current directory and clear environment
             with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
                 with patch.dict(os.environ, {}, clear=True):

@@ -37,7 +37,10 @@ class ZoteroLibrary(PublicationSource):
         except Exception as e:
             # Provide helpful guidance for common authentication issues
             error_msg = str(e).lower()
-            if any(term in error_msg for term in ['api key', 'auth', 'credentials', 'unauthorized']):
+            if any(
+                term in error_msg
+                for term in ["api key", "auth", "credentials", "unauthorized"]
+            ):
                 raise ValueError(
                     f"Failed to initialize Zotero client: {e}. "
                     f"Please ensure you have a valid API key. "
@@ -62,15 +65,24 @@ class ZoteroLibrary(PublicationSource):
         except Exception as e:
             # Provide clear feedback for authentication issues
             error_msg = str(e).lower()
-            if any(term in error_msg for term in ['auth', 'unauthorized', 'forbidden', 'api key', 'credentials']):
+            if any(
+                term in error_msg
+                for term in [
+                    "auth",
+                    "unauthorized",
+                    "forbidden",
+                    "api key",
+                    "credentials",
+                ]
+            ):
                 self.logger.error(
                     f"Zotero authentication failed: {e}. "
                     f"Please check your API key is valid. "
                     f"Get your API key at: https://www.zotero.org/settings/keys"
                 )
                 raise ValueError(
-                    f"Zotero API authentication failed. Please provide a valid API key. "
-                    f"Get your API key at: https://www.zotero.org/settings/keys"
+                    "Zotero API authentication failed. Please provide a valid API key. "
+                    "Get your API key at: https://www.zotero.org/settings/keys"
                 ) from e
             else:
                 self.logger.error(f"Error fetching Zotero data: {e}")
