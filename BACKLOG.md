@@ -9,9 +9,9 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
-- [x] #31: feat: add standardized citation key generation (branch: feat-31-standardized-citation-key-generation)
 
 ## DONE (Completed)
+- [x] #31: feat: add standardized citation key generation (PR #44)
 - [x] #42: fix: test suite failures after PR #41 source refactoring (PR #43)
 - [x] #29: feat: add Zotero My Publications endpoint support (PR #41)
 - [x] #26: fix: ZoteroSource class not integrated into CLI (PR #40)
