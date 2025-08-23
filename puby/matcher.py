@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from .models import Author, Publication
 
@@ -22,10 +22,7 @@ class MatchResult:
         match_status = "Match" if self.is_match else "No Match"
         confidence_pct = int(self.confidence * 100)
         reasons = ", ".join(self.match_reasons) if self.match_reasons else "none"
-        return (
-            f"{match_status} ({confidence_pct}% confidence) - "
-            f"Reasons: {reasons}"
-        )
+        return f"{match_status} ({confidence_pct}% confidence) - " f"Reasons: {reasons}"
 
 
 @dataclass
@@ -57,14 +54,29 @@ class PublicationMatcher:
         self.year_tolerance = year_tolerance
         self.potential_threshold = potential_threshold
 
-    def match_publications(
-        self, pub1: Publication, pub2: Publication
-    ) -> MatchResult:
+    def match_publications(self, pub1: Publication, pub2: Publication) -> MatchResult:
         """Match two publications and return detailed result."""
-        confidence = 0.0
-        reasons = []
+        # Check for definitive DOI match first
+        doi_result = self._check_doi_match(pub1, pub2)
+        if doi_result:
+            return doi_result
 
-        # DOI matching is definitive
+        # Calculate similarity based on multiple factors
+        confidence, reasons = self._calculate_similarity(pub1, pub2)
+        is_match = confidence >= self.similarity_threshold
+
+        return MatchResult(
+            source_publication=pub1,
+            reference_publication=pub2,
+            confidence=min(confidence, 1.0),
+            is_match=is_match,
+            match_reasons=reasons,
+        )
+
+    def _check_doi_match(
+        self, pub1: Publication, pub2: Publication
+    ) -> Optional[MatchResult]:
+        """Check for definitive DOI match between publications."""
         if pub1.doi and pub2.doi:
             if self._normalize_doi(pub1.doi) == self._normalize_doi(pub2.doi):
                 return MatchResult(
@@ -83,6 +95,14 @@ class PublicationMatcher:
                     is_match=False,
                     match_reasons=[],
                 )
+        return None
+
+    def _calculate_similarity(
+        self, pub1: Publication, pub2: Publication
+    ) -> tuple[float, List[str]]:
+        """Calculate similarity score and reasons between two publications."""
+        confidence = 0.0
+        reasons = []
 
         # Title similarity (weighted heavily)
         if pub1.title and pub2.title:
@@ -115,15 +135,7 @@ class PublicationMatcher:
             confidence += 0.1
             reasons.append("journal")
 
-        is_match = confidence >= self.similarity_threshold
-
-        return MatchResult(
-            source_publication=pub1,
-            reference_publication=pub2,
-            confidence=min(confidence, 1.0),
-            is_match=is_match,
-            match_reasons=reasons,
-        )
+        return confidence, reasons
 
     def find_missing(
         self, source_pubs: List[Publication], reference_pubs: List[Publication]
@@ -187,7 +199,8 @@ class PublicationMatcher:
 
                 # If it's a potential match but not exact
                 if (
-                    self.potential_threshold <= result.confidence
+                    self.potential_threshold
+                    <= result.confidence
                     < self.similarity_threshold
                 ):
                     potential_matches.append(
@@ -210,8 +223,8 @@ class PublicationMatcher:
     def _normalize_text(self, text: str) -> str:
         """Normalize text for comparison."""
         # Remove punctuation, extra spaces, convert to lowercase
-        normalized = re.sub(r'[^\w\s]', ' ', text.lower())
-        normalized = re.sub(r'\s+', ' ', normalized).strip()
+        normalized = re.sub(r"[^\w\s]", " ", text.lower())
+        normalized = re.sub(r"\s+", " ", normalized).strip()
         return normalized
 
     def _calculate_title_similarity(self, title1: str, title2: str) -> float:
@@ -243,7 +256,9 @@ class PublicationMatcher:
 
         return jaccard * len_ratio
 
-    def _calculate_author_similarity(self, authors1: List[Author], authors2: List[Author]) -> float:
+    def _calculate_author_similarity(
+        self, authors1: List[Author], authors2: List[Author]
+    ) -> float:
         """Calculate author similarity with name variation handling."""
         if not authors1 or not authors2:
             return 0.0

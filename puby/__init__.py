@@ -3,17 +3,17 @@
 __version__ = "0.1.0"
 
 from .client import PublicationClient
-from .sources import ORCIDSource, ScholarSource, PureSource, ZoteroLibrary
 from .matcher import PublicationMatcher
-from .models import Publication, Author
+from .models import Author, Publication
+from .sources import ORCIDSource, PureSource, ScholarSource, ZoteroLibrary
 
 __all__ = [
-    "PublicationClient",
-    "ORCIDSource",
-    "ScholarSource", 
-    "PureSource",
-    "ZoteroLibrary",
-    "PublicationMatcher",
-    "Publication",
     "Author",
+    "ORCIDSource",
+    "Publication",
+    "PublicationClient",
+    "PublicationMatcher",
+    "PureSource",
+    "ScholarSource",
+    "ZoteroLibrary",
 ]

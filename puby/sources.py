@@ -86,60 +86,75 @@ class ORCIDSource(PublicationSource):
         try:
             response = requests.get(url, headers=headers)
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            return data if isinstance(data, dict) else None
         except requests.RequestException as e:
             self.logger.error(f"Error fetching work detail: {e}")
             return None
 
+    def _extract_title(self, work: Dict[str, Any]) -> str:
+        """Extract title from ORCID work data."""
+        title_data = work.get("title", {})
+        return title_data.get("title", {}).get("value", "")
+
+    def _extract_year(self, work: Dict[str, Any]) -> Optional[int]:
+        """Extract publication year from ORCID work data."""
+        pub_date = work.get("publication-date", {})
+        if pub_date:
+            year_data = pub_date.get("year", {})
+            if year_data:
+                year = year_data.get("value")
+                if year:
+                    return int(year)
+        return None
+
+    def _extract_journal(self, work: Dict[str, Any]) -> Optional[str]:
+        """Extract journal name from ORCID work data."""
+        journal = work.get("journal-title", {})
+        return journal.get("value", "") if journal else None
+
+    def _extract_doi(self, work: Dict[str, Any]) -> Optional[str]:
+        """Extract DOI from ORCID work data."""
+        external_ids = work.get("external-ids", {}).get("external-id", [])
+        for ext_id in external_ids:
+            if ext_id.get("external-id-type") == "doi":
+                return ext_id.get("external-id-value")
+        return None
+
+    def _extract_url(self, work: Dict[str, Any]) -> Optional[str]:
+        """Extract URL from ORCID work data."""
+        url = work.get("url", {})
+        return url.get("value") if url else None
+
+    def _extract_authors(self, work: Dict[str, Any]) -> List[Author]:
+        """Extract authors from ORCID work data."""
+        authors = []
+        contributors = work.get("contributors", {}).get("contributor", [])
+        for contributor in contributors:
+            credit_name = contributor.get("credit-name", {})
+            if credit_name:
+                name = credit_name.get("value", "")
+                if name:
+                    authors.append(Author(name=name))
+
+        # If no contributors, add a placeholder
+        if not authors:
+            authors = [Author(name="[Authors not available]")]
+
+        return authors
+
     def _parse_work(self, work: Dict[str, Any]) -> Optional[Publication]:
         """Parse ORCID work data into Publication."""
         try:
-            # Extract title
-            title_data = work.get("title", {})
-            title = title_data.get("title", {}).get("value", "")
-
+            title = self._extract_title(work)
             if not title:
                 return None
 
-            # Extract year
-            pub_date = work.get("publication-date", {})
-            year = None
-            if pub_date:
-                year_data = pub_date.get("year", {})
-                if year_data:
-                    year = year_data.get("value")
-                    if year:
-                        year = int(year)
-
-            # Extract journal
-            journal = work.get("journal-title", {})
-            journal_name = journal.get("value", "") if journal else None
-
-            # Extract DOI
-            doi = None
-            external_ids = work.get("external-ids", {}).get("external-id", [])
-            for ext_id in external_ids:
-                if ext_id.get("external-id-type") == "doi":
-                    doi = ext_id.get("external-id-value")
-                    break
-
-            # Extract URL
-            url = work.get("url", {})
-            url_value = url.get("value") if url else None
-
-            # Parse contributors/authors
-            authors = []
-            contributors = work.get("contributors", {}).get("contributor", [])
-            for contributor in contributors:
-                credit_name = contributor.get("credit-name", {})
-                if credit_name:
-                    name = credit_name.get("value", "")
-                    if name:
-                        authors.append(Author(name=name))
-
-            # If no contributors, add a placeholder
-            if not authors:
-                authors = [Author(name="[Authors not available]")]
+            year = self._extract_year(work)
+            journal_name = self._extract_journal(work)
+            doi = self._extract_doi(work)
+            url_value = self._extract_url(work)
+            authors = self._extract_authors(work)
 
             return Publication(
                 title=title,
@@ -200,7 +215,7 @@ class PureSource(PublicationSource):
 
 class ZoteroLibrary(PublicationSource):
     """Fetch publications from Zotero library.
-    
+
     NOTE: This is legacy implementation. Use ZoteroSource instead for new code.
     """
 
@@ -243,57 +258,64 @@ class ZoteroLibrary(PublicationSource):
 
         return publications
 
+    def _is_publication_type(self, item_type: str) -> bool:
+        """Check if item type is a publication type."""
+        publication_types = [
+            "journalArticle",
+            "book",
+            "bookSection",
+            "conferencePaper",
+            "thesis",
+            "report",
+            "preprint",
+        ]
+        return item_type in publication_types
+
+    def _extract_zotero_authors(self, data: Dict[str, Any]) -> List[Author]:
+        """Extract authors from Zotero item data."""
+        authors = []
+        creators = data.get("creators", [])
+        for creator in creators:
+            if creator.get("creatorType") == "author":
+                first_name = creator.get("firstName", "")
+                last_name = creator.get("lastName", "")
+                if last_name:
+                    authors.append(
+                        Author(
+                            name=f"{first_name} {last_name}".strip(),
+                            given_name=first_name,
+                            family_name=last_name,
+                        )
+                    )
+        return authors if authors else [Author(name="[No authors]")]
+
+    def _extract_year_from_date(self, date_str: str) -> Optional[int]:
+        """Extract year from date string."""
+        if date_str:
+            year_match = re.search(r"\d{4}", date_str)
+            if year_match:
+                return int(year_match.group())
+        return None
+
     def _parse_zotero_item(self, item: Dict[str, Any]) -> Optional[Publication]:
         """Parse Zotero item into Publication."""
         try:
             data = item.get("data", {})
-
-            # Skip non-publication items
             item_type = data.get("itemType", "")
-            if item_type not in [
-                "journalArticle",
-                "book",
-                "bookSection",
-                "conferencePaper",
-                "thesis",
-                "report",
-                "preprint",
-            ]:
+
+            if not self._is_publication_type(item_type):
                 return None
 
-            # Extract basic fields
             title = data.get("title", "")
             if not title:
                 return None
 
-            # Extract authors
-            authors = []
-            creators = data.get("creators", [])
-            for creator in creators:
-                if creator.get("creatorType") == "author":
-                    first_name = creator.get("firstName", "")
-                    last_name = creator.get("lastName", "")
-                    if last_name:
-                        authors.append(
-                            Author(
-                                name=f"{first_name} {last_name}".strip(),
-                                given_name=first_name,
-                                family_name=last_name,
-                            )
-                        )
-
-            # Extract publication details
-            year = None
-            date_str = data.get("date", "")
-            if date_str:
-                # Try to extract year from date string
-                year_match = re.search(r"\d{4}", date_str)
-                if year_match:
-                    year = int(year_match.group())
+            authors = self._extract_zotero_authors(data)
+            year = self._extract_year_from_date(data.get("date", ""))
 
             return Publication(
                 title=title,
-                authors=authors if authors else [Author(name="[No authors]")],
+                authors=authors,
                 year=year,
                 journal=data.get("publicationTitle"),
                 volume=data.get("volume"),
@@ -320,11 +342,11 @@ class ZoteroSource(PublicationSource):
         if not config.is_valid():
             errors = ", ".join(config.validation_errors())
             raise ValueError(f"Invalid Zotero configuration: {errors}")
-        
+
         self.config = config
         self.logger = logging.getLogger(__name__)
-        
-        # Initialize Zotero API client  
+
+        # Initialize Zotero API client
         try:
             if self.config.library_type == "group":
                 if not self.config.group_id:
@@ -339,11 +361,9 @@ class ZoteroSource(PublicationSource):
                         "Please provide your numeric user ID in the group_id field."
                     )
                 library_id = self.config.group_id
-            
+
             self.zot = zotero.Zotero(
-                library_id, 
-                self.config.library_type, 
-                self.config.api_key
+                library_id, self.config.library_type, self.config.api_key
             )
         except Exception as e:
             raise ValueError(f"Failed to initialize Zotero client: {e}") from e
@@ -356,7 +376,7 @@ class ZoteroSource(PublicationSource):
             # Use everything() to handle pagination automatically
             # This fetches all items in batches, handling Zotero's pagination
             items = self.zot.everything(self.zot.top())
-            
+
             self.logger.info(f"Retrieved {len(items)} items from Zotero")
 
             for item in items:
@@ -371,59 +391,63 @@ class ZoteroSource(PublicationSource):
         self.logger.info(f"Parsed {len(publications)} publications from Zotero")
         return publications
 
+    def _is_publication_item(self, item_type: str) -> bool:
+        """Check if Zotero item type represents a publication."""
+        publication_types = [
+            "journalArticle",
+            "book",
+            "bookSection",
+            "conferencePaper",
+            "thesis",
+            "report",
+            "preprint",
+        ]
+        return item_type in publication_types
+
+    def _parse_zotero_creators(self, data: Dict[str, Any]) -> List[Author]:
+        """Extract and parse authors from Zotero creators data."""
+        authors = []
+        creators = data.get("creators", [])
+        for creator in creators:
+            if creator.get("creatorType") == "author":
+                first_name = creator.get("firstName", "").strip()
+                last_name = creator.get("lastName", "").strip()
+
+                if last_name or first_name:
+                    full_name = f"{first_name} {last_name}".strip()
+                    authors.append(
+                        Author(
+                            name=full_name,
+                            given_name=first_name or None,
+                            family_name=last_name or None,
+                        )
+                    )
+
+        return authors if authors else [Author(name="[No authors]")]
+
+    def _parse_publication_year(self, date_str: str) -> Optional[int]:
+        """Parse publication year from Zotero date field."""
+        if date_str:
+            year_match = re.search(r"\d{4}", date_str)
+            if year_match:
+                return int(year_match.group())
+        return None
+
     def _parse_zotero_item(self, item: Dict[str, Any]) -> Optional[Publication]:
         """Parse Zotero item into Publication."""
         try:
             data = item.get("data", {})
-
-            # Skip non-publication items
             item_type = data.get("itemType", "")
-            if item_type not in [
-                "journalArticle",
-                "book", 
-                "bookSection",
-                "conferencePaper",
-                "thesis",
-                "report",
-                "preprint",
-            ]:
+
+            if not self._is_publication_item(item_type):
                 return None
 
-            # Extract title
             title = data.get("title", "").strip()
             if not title:
                 return None
 
-            # Extract authors
-            authors = []
-            creators = data.get("creators", [])
-            for creator in creators:
-                if creator.get("creatorType") == "author":
-                    first_name = creator.get("firstName", "").strip()
-                    last_name = creator.get("lastName", "").strip()
-                    
-                    if last_name or first_name:
-                        full_name = f"{first_name} {last_name}".strip()
-                        authors.append(
-                            Author(
-                                name=full_name,
-                                given_name=first_name or None,
-                                family_name=last_name or None,
-                            )
-                        )
-
-            # If no authors found, add placeholder
-            if not authors:
-                authors = [Author(name="[No authors]")]
-
-            # Extract publication year from date field
-            year = None
-            date_str = data.get("date", "")
-            if date_str:
-                # Extract 4-digit year from various date formats
-                year_match = re.search(r"\d{4}", date_str)
-                if year_match:
-                    year = int(year_match.group())
+            authors = self._parse_zotero_creators(data)
+            year = self._parse_publication_year(data.get("date", ""))
 
             return Publication(
                 title=title,

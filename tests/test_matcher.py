@@ -1,10 +1,9 @@
 """Tests for publication matching and comparison utilities."""
 
 import pytest
-from datetime import date
 
+from puby.matcher import MatchResult, PublicationMatcher
 from puby.models import Author, Publication
-from puby.matcher import PublicationMatcher, MatchResult
 
 
 @pytest.fixture
@@ -81,7 +80,7 @@ class TestPublicationMatcher:
     def test_exact_doi_match(self, matcher, sample_publications):
         """Test exact DOI matching between publications."""
         pub1, pub2 = sample_publications[0], sample_publications[1]
-        
+
         # Should match based on identical DOI
         result = matcher.match_publications(pub1, pub2)
         assert result.is_match is True
@@ -91,7 +90,7 @@ class TestPublicationMatcher:
     def test_title_normalization_match(self, matcher, sample_publications):
         """Test title-based matching with normalization."""
         pub1, pub2 = sample_publications[0], sample_publications[1]
-        
+
         # Remove DOIs to test title matching
         pub1_no_doi = Publication(
             title=pub1.title,
@@ -107,7 +106,7 @@ class TestPublicationMatcher:
             journal=pub2.journal,
             source=pub2.source,
         )
-        
+
         result = matcher.match_publications(pub1_no_doi, pub2_no_doi)
         assert result.is_match is True
         assert result.confidence > 0.8
@@ -116,7 +115,7 @@ class TestPublicationMatcher:
     def test_partial_title_match(self, matcher, sample_publications):
         """Test partial title matching."""
         pub3, pub4 = sample_publications[2], sample_publications[3]
-        
+
         result = matcher.match_publications(pub3, pub4)
         # Should be a potential match but not exact
         assert result.is_match is False
@@ -127,18 +126,20 @@ class TestPublicationMatcher:
         """Test author name variation handling."""
         pub1 = Publication(
             title="Test Publication",
-            authors=[Author("Smith, John A.", given_name="John A.", family_name="Smith")],
+            authors=[
+                Author("Smith, John A.", given_name="John A.", family_name="Smith")
+            ],
             year=2023,
             source="orcid",
         )
-        
+
         pub2 = Publication(
             title="Test Publication",
             authors=[Author("Smith, J. A.", given_name="J. A.", family_name="Smith")],
             year=2023,
             source="zotero",
         )
-        
+
         result = matcher.match_publications(pub1, pub2)
         assert result.is_match is True
         assert result.confidence > 0.8
@@ -152,14 +153,14 @@ class TestPublicationMatcher:
             year=2022,
             source="orcid",
         )
-        
+
         pub2 = Publication(
             title="Test Publication",
             authors=[Author("Smith, John", given_name="John", family_name="Smith")],
             year=2023,  # +1 year difference
             source="zotero",
         )
-        
+
         result = matcher.match_publications(pub1, pub2)
         assert result.is_match is True  # Should match with year tolerance
         assert result.confidence > 0.7
@@ -173,7 +174,7 @@ class TestPublicationMatcher:
             doi="10.1000/example.001",
             source="orcid",
         )
-        
+
         pub2 = Publication(
             title="Same Title",
             authors=[Author("Smith, John", given_name="John", family_name="Smith")],
@@ -181,18 +182,22 @@ class TestPublicationMatcher:
             doi="10.1000/example.002",  # Different DOI
             source="zotero",
         )
-        
+
         result = matcher.match_publications(pub1, pub2)
         assert result.is_match is False
         assert result.confidence == 0.0
 
     def test_find_missing_publications(self, matcher, sample_publications):
         """Test finding missing publications."""
-        source_pubs = [sample_publications[0], sample_publications[2], sample_publications[4]]
+        source_pubs = [
+            sample_publications[0],
+            sample_publications[2],
+            sample_publications[4],
+        ]
         reference_pubs = [sample_publications[1]]  # Only one matching publication
-        
+
         missing = matcher.find_missing(source_pubs, reference_pubs)
-        
+
         # Should find 2 missing publications (indexes 2 and 4)
         assert len(missing) == 2
         assert sample_publications[2] in missing
@@ -205,9 +210,9 @@ class TestPublicationMatcher:
             sample_publications[1],  # Duplicate of first
             sample_publications[2],  # Unique
         ]
-        
+
         duplicates = matcher.find_duplicates(pubs_with_duplicates)
-        
+
         assert len(duplicates) == 1
         assert len(duplicates[0]) == 2  # Two publications in duplicate group
         assert sample_publications[0] in duplicates[0]
@@ -223,7 +228,7 @@ class TestPublicationMatcher:
             journal="Journal of Science",
             source="orcid",
         )
-        
+
         reference_pub = Publication(
             title="Machine Learning in Scientific Computing",
             authors=[Author("Smith, John", given_name="John", family_name="Smith")],
@@ -231,9 +236,11 @@ class TestPublicationMatcher:
             journal="Science Journal",  # Different journal
             source="zotero",
         )
-        
-        potential_matches = matcher.find_potential_matches([source_pub], [reference_pub])
-        
+
+        potential_matches = matcher.find_potential_matches(
+            [source_pub], [reference_pub]
+        )
+
         assert len(potential_matches) == 1
         match = potential_matches[0]
         assert match.source_publication == source_pub
@@ -250,7 +257,7 @@ class TestPublicationMatcher:
             doi="10.1000/test.001",
             source="orcid",
         )
-        
+
         pub2 = Publication(
             title="Exact Title",
             authors=[Author("Smith, John", given_name="John", family_name="Smith")],
@@ -258,28 +265,30 @@ class TestPublicationMatcher:
             doi="10.1000/test.001",
             source="zotero",
         )
-        
+
         result = matcher.match_publications(pub1, pub2)
         assert result.confidence >= 1.0
 
     def test_empty_publication_lists(self, matcher):
         """Test handling of empty publication lists."""
         empty_list = []
-        sample_list = [Publication(
-            title="Test",
-            authors=[Author("Test", family_name="Test")],
-            year=2023,
-            source="test",
-        )]
-        
+        sample_list = [
+            Publication(
+                title="Test",
+                authors=[Author("Test", family_name="Test")],
+                year=2023,
+                source="test",
+            )
+        ]
+
         # Empty source list
         missing = matcher.find_missing(empty_list, sample_list)
         assert missing == []
-        
+
         # Empty reference list
         missing = matcher.find_missing(sample_list, empty_list)
         assert len(missing) == 1
-        
+
         # Empty duplicate search
         duplicates = matcher.find_duplicates(empty_list)
         assert duplicates == []
@@ -287,21 +296,21 @@ class TestPublicationMatcher:
     def test_custom_threshold(self):
         """Test custom similarity threshold."""
         strict_matcher = PublicationMatcher(similarity_threshold=0.95)
-        
+
         pub1 = Publication(
             title="Machine Learning Applications",
             authors=[Author("Smith, J.", family_name="Smith")],
             year=2023,
             source="orcid",
         )
-        
+
         pub2 = Publication(
             title="Machine Learning Applications in Science",  # Slightly different
             authors=[Author("Smith, John", family_name="Smith")],
             year=2023,
             source="zotero",
         )
-        
+
         result = strict_matcher.match_publications(pub1, pub2)
         assert result.is_match is False  # Should not match with strict threshold
 
@@ -314,7 +323,7 @@ class TestPublicationMatcher:
             journal="Nature",
             source="orcid",
         )
-        
+
         pub2_same_journal = Publication(
             title="Test Title",
             authors=[Author("Smith, J.", family_name="Smith")],
@@ -322,7 +331,7 @@ class TestPublicationMatcher:
             journal="Nature",  # Same journal
             source="zotero",
         )
-        
+
         pub2_diff_journal = Publication(
             title="Test Title",
             authors=[Author("Smith, J.", family_name="Smith")],
@@ -330,10 +339,10 @@ class TestPublicationMatcher:
             journal="Science",  # Different journal
             source="zotero",
         )
-        
+
         result_same = matcher.match_publications(pub1, pub2_same_journal)
         result_diff = matcher.match_publications(pub1, pub2_diff_journal)
-        
+
         assert result_same.confidence > result_diff.confidence
 
 
@@ -342,9 +351,13 @@ class TestMatchResult:
 
     def test_match_result_creation(self):
         """Test MatchResult creation and properties."""
-        pub1 = Publication(title="Test 1", authors=[Author("A")], year=2023, source="test")
-        pub2 = Publication(title="Test 2", authors=[Author("B")], year=2023, source="test")
-        
+        pub1 = Publication(
+            title="Test 1", authors=[Author("A")], year=2023, source="test"
+        )
+        pub2 = Publication(
+            title="Test 2", authors=[Author("B")], year=2023, source="test"
+        )
+
         result = MatchResult(
             source_publication=pub1,
             reference_publication=pub2,
@@ -352,7 +365,7 @@ class TestMatchResult:
             is_match=True,
             match_reasons=["title", "year"],
         )
-        
+
         assert result.source_publication == pub1
         assert result.reference_publication == pub2
         assert result.confidence == 0.85
@@ -361,9 +374,13 @@ class TestMatchResult:
 
     def test_match_result_string_representation(self):
         """Test MatchResult string representation."""
-        pub1 = Publication(title="Test 1", authors=[Author("A")], year=2023, source="test")
-        pub2 = Publication(title="Test 2", authors=[Author("B")], year=2023, source="test")
-        
+        pub1 = Publication(
+            title="Test 1", authors=[Author("A")], year=2023, source="test"
+        )
+        pub2 = Publication(
+            title="Test 2", authors=[Author("B")], year=2023, source="test"
+        )
+
         result = MatchResult(
             source_publication=pub1,
             reference_publication=pub2,
@@ -371,7 +388,7 @@ class TestMatchResult:
             is_match=True,
             match_reasons=["title"],
         )
-        
+
         str_repr = str(result)
         assert "Match" in str_repr
         assert "85%" in str_repr or "0.85" in str_repr
