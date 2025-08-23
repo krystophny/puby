@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #29: feat: add Zotero My Publications endpoint support
 - [ ] #31: feat: add standardized citation key generation
 - [ ] #32: feat: add fuzzy title matching with configurable threshold
 - [ ] #33: feat: add BibTeX export for missing publications
@@ -11,6 +10,7 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
+- [x] #29: feat: add Zotero My Publications endpoint support (branch: feat-29-zotero-my-publications-endpoint)
 
 ## DONE (Completed)
 - [x] #26: fix: ZoteroSource class not integrated into CLI (PR #40)
