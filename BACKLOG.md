@@ -6,9 +6,9 @@
 - [ ] #10: feat: add Pure research portal support
 
 ## DOING (Current Work)
-- [x] #7: feat: implement report generation and output formatting (branch: feat-report-generation-7)
 
 ## DONE (Completed)
+- [x] #7: feat: implement report generation and output formatting (PR #17)
 - [x] #6: feat: implement publication matching and comparison (PR #16)
 - [x] #5: feat: implement basic Zotero API client (PR #15)
 - [x] #4: feat: implement ORCID API parser (PR #14)
