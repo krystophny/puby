@@ -470,22 +470,256 @@ class ScholarSource(PublicationSource):
 
 
 class PureSource(PublicationSource):
-    """Fetch publications from Pure research portal."""
+    """Fetch publications from Pure research portal.
+    
+    Supports both HTML scraping and API access where available.
+    Pure portals vary by institution but share common patterns.
+    """
 
     def __init__(self, pure_url: str):
-        """Initialize Pure source."""
-        self.pure_url = pure_url
+        """Initialize Pure source with validation."""
+        if not pure_url or not pure_url.strip():
+            raise ValueError("Invalid Pure portal URL: empty string")
+        
+        if not pure_url.startswith("http"):
+            raise ValueError(f"Invalid Pure portal URL: {pure_url}")
+            
+        self.pure_url = pure_url.strip()
         self.logger = logging.getLogger(__name__)
+        self._base_domain = self._extract_base_domain()
+
+    def _extract_base_domain(self) -> str:
+        """Extract base domain from Pure URL."""
+        from urllib.parse import urlparse
+        parsed = urlparse(self.pure_url)
+        return f"{parsed.scheme}://{parsed.netloc}"
+
+    def _extract_person_id(self) -> str:
+        """Extract person identifier from Pure URL."""
+        # Pattern: /en/persons/person-identifier or /persons/person-identifier
+        import re
+        match = re.search(r"/persons/([^/?]+)", self.pure_url)
+        if match:
+            return match.group(1)
+        raise ValueError(f"Cannot extract person ID from URL: {self.pure_url}")
+
+    def _build_api_url(self) -> str:
+        """Build Pure API URL for research outputs."""
+        person_id = self._extract_person_id()
+        return f"{self._base_domain}/ws/api/persons/{person_id}/research-outputs"
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Get headers with proper User-Agent."""
+        return {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            ),
+            "Accept": (
+                "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                "image/webp,*/*;q=0.8"
+            ),
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+        }
+
+    def _apply_rate_limit(self) -> None:
+        """Apply delay to avoid overwhelming Pure portals."""
+        delay = random.uniform(1.0, 2.0)
+        time.sleep(delay)
 
     def fetch(self) -> List[Publication]:
-        """Fetch publications from Pure portal."""
-        # Pure portals often have APIs but they vary by institution
-        # This would need institution-specific implementation
+        """Fetch publications from Pure portal.
+        
+        Attempts API access first, falls back to HTML scraping.
+        """
+        # Try API first if available
+        try:
+            api_url = self._build_api_url()
+            self.logger.info(f"Attempting Pure API access: {api_url}")
+            
+            response = requests.get(api_url, headers={"Accept": "application/json"})
+            if response.status_code == 200:
+                return self._parse_api_response(response.json())
+        except Exception as e:
+            self.logger.debug(f"Pure API not available, falling back to HTML: {e}")
 
-        self.logger.warning(
-            "Pure portal integration not yet implemented. "
-            "Pure APIs vary by institution."
-        )
+        # Fallback to HTML scraping
+        return self._fetch_from_html()
+
+    def _fetch_from_html(self) -> List[Publication]:
+        """Fetch publications via HTML scraping with pagination support."""
+        publications = []
+        current_url = self.pure_url
+        
+        try:
+            while current_url:
+                self.logger.info(f"Fetching Pure page: {current_url}")
+                
+                response = requests.get(current_url, headers=self._get_headers())
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.text, "html.parser")
+                page_publications = self._parse_html_page(soup)
+                publications.extend(page_publications)
+                
+                # Check for next page
+                next_url = self._find_next_page_url(soup)
+                if next_url:
+                    if not next_url.startswith("http"):
+                        # Handle relative URLs - could be relative to current page or base domain
+                        from urllib.parse import urljoin
+                        next_url = urljoin(current_url, next_url)
+                    current_url = next_url
+                    self._apply_rate_limit()
+                else:
+                    break
+                    
+        except requests.RequestException as e:
+            self.logger.error(f"Error fetching Pure data: {e}")
+            
+        return publications
+
+    def _find_next_page_url(self, soup: BeautifulSoup) -> Optional[str]:
+        """Find URL for next page of results."""
+        # Look for "Load more" or pagination links
+        load_more = soup.find("div", class_="load-more")
+        if load_more:
+            link = load_more.find("a")
+            if link and link.get("href"):
+                return link["href"]
+                
+        # Look for pagination with page parameter
+        pagination = soup.find("a", string=re.compile(r"next|more", re.I))
+        if pagination and pagination.get("href"):
+            return pagination["href"]
+            
+        return None
+
+    def _parse_html_page(self, soup: BeautifulSoup) -> List[Publication]:
+        """Parse publications from HTML page."""
+        publications = []
+        
+        # Look for main content container
+        content_div = soup.find("div", class_="result-container")
+        if not content_div:
+            return publications
+            
+        # Find publication containers  
+        pub_containers = content_div.find_all("div", class_=re.compile(r"rendering.*contribution"))
+        
+        for container in pub_containers:
+            pub = self._parse_publication_container(container)
+            if pub:
+                publications.append(pub)
+                
+        return publications
+
+    def _parse_publication_container(self, container: BeautifulSoup) -> Optional[Publication]:
+        """Parse individual publication container."""
+        try:
+            # Extract title
+            title = self._extract_title_from_container(container)
+            if not title:
+                return None
+                
+            # Extract authors
+            authors = self._extract_authors_from_container(container)
+            
+            # Extract publication details
+            details = self._extract_publication_details(container)
+            
+            return Publication(
+                title=title,
+                authors=authors,
+                year=details.get("year"),
+                journal=details.get("journal"),
+                volume=details.get("volume"),
+                issue=details.get("issue"),
+                pages=details.get("pages"),
+                doi=details.get("doi"),
+                url=details.get("url"),
+                source="Pure",
+                raw_data={"html": str(container)}
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Error parsing Pure publication: {e}")
+            return None
+
+    def _extract_title_from_container(self, container: BeautifulSoup) -> Optional[str]:
+        """Extract publication title."""
+        # Look for title in h3 or title class
+        title_elem = container.find("h3", class_="title")
+        if title_elem:
+            link = title_elem.find("a")
+            if link:
+                title = link.get_text(strip=True)
+                return title if title else None
+                
+        return None
+
+    def _extract_authors_from_container(self, container: BeautifulSoup) -> List[Author]:
+        """Extract authors from publication container."""
+        authors = []
+        
+        # Look for persons/authors container
+        persons_div = container.find("div", class_="persons")
+        if persons_div:
+            # Find author name spans
+            name_spans = persons_div.find_all("span", class_="name")
+            for span in name_spans:
+                name = span.get_text(strip=True)
+                if name and name not in [",", "and"]:
+                    # Clean up name (remove trailing commas)
+                    name = name.rstrip(",").strip()
+                    if name:
+                        authors.append(Author(name=name))
+        
+        return authors if authors else [Author(name="[Authors not available]")]
+
+    def _extract_publication_details(self, container: BeautifulSoup) -> Dict[str, Any]:
+        """Extract publication details like journal, year, etc."""
+        details = {}
+        
+        details_div = container.find("div", class_="rendering_publicationdetails")
+        if details_div:
+            # Extract journal
+            journal_span = details_div.find("span", class_="journal")
+            if journal_span:
+                details["journal"] = journal_span.get_text(strip=True)
+                
+            # Extract year
+            date_span = details_div.find("span", class_="date")
+            if date_span:
+                year_text = date_span.get_text(strip=True)
+                try:
+                    details["year"] = int(year_text)
+                except ValueError:
+                    pass
+                    
+            # Extract volume, issue, pages
+            volume_span = details_div.find("span", class_="volume")
+            if volume_span:
+                details["volume"] = volume_span.get_text(strip=True)
+                
+            issue_span = details_div.find("span", class_="issue")  
+            if issue_span:
+                details["issue"] = issue_span.get_text(strip=True)
+                
+            pages_span = details_div.find("span", class_="pages")
+            if pages_span:
+                details["pages"] = pages_span.get_text(strip=True)
+                
+        return details
+
+    def _parse_api_response(self, data: Dict[str, Any]) -> List[Publication]:
+        """Parse Pure API response (implementation would be institution-specific)."""
+        # This is a placeholder for API parsing
+        # Real implementation would need to handle institution-specific API formats
+        self.logger.info("Pure API parsing not yet implemented for this portal")
         return []
 
 
