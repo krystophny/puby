@@ -1,11 +1,11 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #10: feat: add Pure research portal support
 
 ## DOING (Current Work)
 
 ## DONE (Completed)
+- [x] #10: feat: add Pure research portal support (PR created)
 - [x] #9: feat: add Google Scholar profile parsing support (PR #19)
 - [x] #8: feat: integrate CLI with all components for MVP workflow (PR #18)
 - [x] #7: feat: implement report generation and output formatting (PR #17)
