@@ -1,241 +1,234 @@
-# Puby - Publication List Management Tool
+# Puby - Technical Design Document
 
-## MVP Architecture
+## Overview
 
-### Vision
-A command-line tool that helps researchers maintain up-to-date publication lists by integrating multiple sources (Google Scholar, ORCID, Pure) with Zotero API validation.
+Puby is a Python-based command-line tool for managing academic publication lists across multiple sources. It helps researchers identify missing publications, duplicates, and synchronization issues between their various academic profiles and reference management systems.
 
-### Core MVP Components
+## Architecture
+
+### Technology Stack
+
+- **Language**: Python 3.8+
+- **CLI Framework**: Click
+- **HTTP Client**: requests
+- **Zotero Integration**: pyzotero
+- **Data Processing**: BeautifulSoup4 (for HTML parsing)
+- **Output Formatting**: tabulate, built-in json/csv modules
+
+### Module Structure
 
 ```
-puby CLI
-├── Input Sources
-│   ├── URL Parser (Scholar, ORCID, Pure)
-│   ├── BibTeX Scraper
-│   └── Data Normalizer
-├── Zotero Integration
-│   ├── API Client
-│   ├── Publication Matcher
-│   └── Duplicate Detector
-├── Analysis Engine
-│   ├── Missing Publication Detector
-│   ├── Duplicate Identifier
-│   └── Data Quality Checker
-└── Output Generator
-    ├── Missing Publications Report
-    ├── Duplicate Report
-    └── Sync Recommendations
+puby/
+├── __init__.py       # Package initialization and exports
+├── cli.py           # Command-line interface
+├── client.py        # Main client coordinating operations
+├── models.py        # Data models (Publication, Author)
+├── sources.py       # Source adapters (ORCID, Scholar, Pure, Zotero)
+├── matcher.py       # Publication matching algorithms
+└── reporter.py      # Output formatting and reporting
 ```
 
-### MVP User Flow
-1. User provides URLs: `puby check --scholar=URL --orcid=URL --pure=URL --zotero=GROUP`
-2. Tool scrapes publications from each source
-3. Tool queries Zotero API for existing publications
-4. Tool analyzes differences and generates reports
-5. Tool outputs actionable recommendations
+### Core Components
 
-### Technical Architecture
+#### 1. Data Models (`models.py`)
 
-#### libcurl Integration Strategy
+- **Publication**: Central data model representing a scientific publication
+  - Attributes: title, authors, year, DOI, journal, etc.
+  - Methods: `matches()`, `to_bibtex()`, similarity calculation
+  
+- **Author**: Represents publication authors
+  - Attributes: name, given_name, family_name, ORCID, affiliation
 
-Based on patterns from the fortran-curl project, puby will use direct libcurl integration:
+#### 2. Source Adapters (`sources.py`)
 
-**ISO C Binding Approach**:
-- Use `iso_c_binding` module for direct C library interfacing
-- Create thin Fortran wrappers around essential libcurl functions:
-  - `curl_easy_init()` - Initialize curl handle
-  - `curl_easy_setopt()` - Configure request options
-  - `curl_easy_perform()` - Execute HTTP request
-  - `curl_easy_cleanup()` - Clean up resources
-- Handle C string conversion and memory management carefully
+Abstract base class `PublicationSource` with implementations:
 
-**Key libcurl Functions Required**:
-```fortran
-! Core curl interface bindings
-interface
-    function curl_easy_init() bind(c, name='curl_easy_init')
-        import :: c_ptr
-        type(c_ptr) :: curl_easy_init
-    end function
-    
-    function curl_easy_setopt(curl, option, parameter) bind(c, name='curl_easy_setopt')
-        import :: c_ptr, c_int, c_long
-        type(c_ptr), value :: curl
-        integer(c_int), value :: option
-        type(*), intent(in) :: parameter
-        integer(c_int) :: curl_easy_setopt
-    end function
-    
-    function curl_easy_perform(curl) bind(c, name='curl_easy_perform')
-        import :: c_ptr, c_int
-        type(c_ptr), value :: curl
-        integer(c_int) :: curl_easy_perform
-    end function
-end interface
+- **ORCIDSource**: Fetches from ORCID API v3.0
+  - Direct API access, no authentication required for public data
+  - Parses work summaries and detailed work data
+  
+- **ScholarSource**: Google Scholar integration
+  - Currently placeholder (scraping challenges)
+  - Future: scholarly library integration
+  
+- **PureSource**: Institutional Pure portals
+  - Institution-specific implementation required
+  
+- **ZoteroLibrary**: Zotero library access
+  - Uses pyzotero for API interaction
+  - Supports both public and private libraries
+
+#### 3. Matching Engine (`matcher.py`)
+
+- **PublicationMatcher**: Handles publication comparison
+  - DOI-based exact matching
+  - Title similarity using Jaccard coefficient
+  - Fuzzy matching with configurable thresholds
+  - Duplicate detection within collections
+
+#### 4. CLI Interface (`cli.py`)
+
+- Built with Click for robust command parsing
+- Commands:
+  - `check`: Main comparison command
+  - `fetch`: Direct fetching from sources (future)
+- Comprehensive error handling and validation
+
+#### 5. Reporting (`reporter.py`)
+
+- Multiple output formats:
+  - Table (human-readable)
+  - JSON (machine-readable)
+  - CSV (spreadsheet-compatible)
+  - BibTeX (reference manager import)
+
+## Data Flow
+
+1. **Input**: User provides source URLs and Zotero library ID
+2. **Fetching**: Each source adapter fetches publications
+3. **Normalization**: Publications converted to common model
+4. **Matching**: Publications compared using matching algorithms
+5. **Analysis**: Missing, duplicates, and potential matches identified
+6. **Output**: Results formatted and displayed
+
+## API Integration
+
+### ORCID API
+
+- Base URL: `https://pub.orcid.org/v3.0`
+- No authentication required for public data
+- Endpoints used:
+  - `/{orcid-id}/works`: List of works
+  - `/{orcid-id}/work/{put-code}`: Detailed work data
+
+### Zotero API
+
+- Uses pyzotero library for abstraction
+- Supports API key authentication
+- Fetches all items with `everything(top())`
+
+## Matching Algorithm
+
+### Similarity Calculation
+
+1. **DOI Matching** (weight: 1.0)
+   - Exact match = 100% similarity
+   - Different DOIs = 0% similarity
+
+2. **Title Similarity** (weight: 0.7)
+   - Jaccard similarity on word sets
+   - Case-insensitive comparison
+
+3. **Year Matching** (weight: 0.2)
+   - Binary match (same year or not)
+
+4. **Author Matching** (weight: 0.1)
+   - First author comparison
+   - Future: full author list comparison
+
+### Thresholds
+
+- **Exact Match**: ≥ 0.8 similarity
+- **Potential Match**: 0.5 - 0.8 similarity
+- **No Match**: < 0.5 similarity
+
+## Error Handling
+
+- Network errors: Graceful degradation with logging
+- API errors: User-friendly error messages
+- Invalid input: Validation at CLI level
+- Missing data: Optional fields handled gracefully
+
+## Performance Considerations
+
+- Asynchronous fetching: Future optimization for multiple sources
+- Caching: Potential for local caching of API responses
+- Batch processing: Handle large publication lists efficiently
+
+## Security
+
+- No credentials stored locally
+- API keys passed as command-line arguments or environment variables
+- HTTPS enforced for all API communications
+- No sensitive data logging
+
+## Testing Strategy
+
+- Unit tests for each module
+- Integration tests for API interactions
+- Mock responses for reliable testing
+- CLI command testing with Click's testing utilities
+
+## Future Enhancements
+
+### Phase 1: Core Functionality ✅
+- CLI argument parsing
+- ORCID integration
+- Zotero integration
+- Basic matching algorithm
+
+### Phase 2: Extended Sources
+- Google Scholar integration
+- Pure portal support
+- arXiv integration
+- PubMed integration
+
+### Phase 3: Advanced Features
+- Batch operations
+- Automated synchronization
+- Web interface
+- Citation metrics
+- Duplicate auto-merging
+
+### Phase 4: Intelligence Layer
+- Machine learning for better matching
+- Metadata enhancement
+- Author disambiguation
+- Conference vs journal detection
+
+## Development Workflow
+
+1. **Setup**: Virtual environment with pip
+2. **Dependencies**: Managed via pyproject.toml
+3. **Testing**: pytest with coverage
+4. **Linting**: black + ruff
+5. **Type Checking**: mypy
+6. **Documentation**: Docstrings + README
+
+## Deployment
+
+- **Package Distribution**: PyPI
+- **Installation**: pip install
+- **Updates**: Semantic versioning
+- **Compatibility**: Python 3.8+
+
+## Configuration
+
+### Environment Variables
+
+- `PUBY_ZOTERO_API_KEY`: Default Zotero API key
+- `PUBY_ZOTERO_LIBRARY`: Default library ID
+- `PUBY_LOG_LEVEL`: Logging verbosity
+
+### Config File (Future)
+
+```yaml
+# ~/.puby/config.yaml
+zotero:
+  api_key: xxx
+  library_id: 12345
+
+sources:
+  orcid: 0000-0000-0000-0000
+  scholar: user_id
+
+matching:
+  threshold: 0.8
 ```
 
-**Memory Management**:
-- Use Fortran allocatable strings for HTTP response data
-- Implement C callback functions to capture response body and headers
-- Ensure proper cleanup of curl handles and allocated memory
+## Success Metrics
 
-#### Language: Modern Fortran (2018+)
-- **Rationale**: Existing fpm project, excellent for data processing
-- **HTTP Client**: Direct libcurl integration via ISO C bindings
-- **JSON Parsing**: Custom lightweight parser for API responses
-- **String Processing**: Native Fortran string handling
-
-#### Module Structure
-```fortran
-src/
-├── puby.f90                    ! Main module with public API
-├── puby_curl.f90              ! libcurl ISO C bindings wrapper (IMPLEMENTED)
-│   ├── Core libcurl interfaces (init, setopt, perform, cleanup) ✓
-│   ├── C callback functions for response capture ✓
-│   ├── C string conversion utilities ✓
-│   └── Memory management for C/Fortran boundary ✓
-├── puby_http.f90              ! High-level HTTP client interface (IMPLEMENTED)
-│   ├── Simplified GET/POST wrappers ✓
-│   ├── Response parsing and error handling ✓
-│   ├── Configuration management (timeouts, SSL, headers) ✓
-│   └── Fortran-native interface over libcurl bindings ✓
-├── puby_parsers.f90           ! URL/content parsers
-├── puby_zotero.f90            ! Zotero API integration
-├── puby_analysis.f90          ! Publication analysis
-└── puby_reports.f90           ! Output generation
-```
-
-#### Core Types
-```fortran
-type :: publication_t
-    character(len=:), allocatable :: title
-    character(len=:), allocatable :: authors
-    character(len=:), allocatable :: journal
-    character(len=:), allocatable :: year
-    character(len=:), allocatable :: doi
-    character(len=:), allocatable :: url
-    character(len=:), allocatable :: source
-end type
-
-type :: zotero_config_t
-    character(len=:), allocatable :: api_key
-    character(len=:), allocatable :: group_id
-    character(len=:), allocatable :: library_type
-end type
-
-type :: http_response_t
-    integer :: status_code
-    character(len=:), allocatable :: body
-    character(len=:), allocatable :: headers
-    logical :: success
-    character(len=256) :: error_message
-end type
-
-type :: http_config_t
-    character(len=:), allocatable :: user_agent
-    integer :: timeout_seconds
-    logical :: follow_redirects
-    logical :: verify_ssl
-    logical :: initialized
-end type
-```
-
-### MVP Workflow
-
-#### Phase 1: Basic CLI Framework ✓
-- Argument parsing for URLs and Zotero config ✓
-- libcurl ISO C bindings setup with basic wrapper ✓
-- Simple text output
-
-#### Phase 2: HTTP Foundation ✓
-- libcurl ISO C bindings module (`puby_curl.f90`) ✓
-- High-level HTTP client interface (`puby_http.f90`) ✓
-- GET/POST request functionality ✓
-- Configuration and error handling ✓
-
-#### Phase 3: Data Extraction (NEXT)
-- Google Scholar HTML parsing
-- ORCID API integration
-- Pure API/scraping
-- Basic publication data structure
-
-#### Phase 4: Zotero Integration
-- Zotero API client
-- Publication retrieval
-- Basic matching algorithm (title/DOI comparison)
-
-#### Phase 5: Analysis & Reporting
-- Missing publication detection
-- Duplicate identification
-- Formatted text reports
-
-### Integration Points
-
-#### External Dependencies
-- **libcurl**: Direct HTTP client library integration
-- **Claude CLI**: Future AI-assisted text processing
-- **Zotero API**: Publication validation and sync
-
-#### API Integrations
-1. **Zotero API v3**: Group/library access
-2. **ORCID Public API**: Publication retrieval
-3. **Web Scraping**: Google Scholar, Pure (as needed)
-
-### MVP Constraints
-
-#### What's IN MVP
-- Single command execution
-- Text-based configuration
-- Simple console output
-- Basic duplicate detection (title/DOI matching)
-- Support for 1-2 URL sources initially
-
-#### What's OUT of MVP
-- Interactive configuration
-- GUI interface
-- Complex fuzzy matching algorithms
-- Automatic synchronization
-- Publication editing features
-- Bibliography generation
-- Multi-user support
-
-### Success Metrics
-1. **Functional**: Can parse at least one URL source and detect basic mismatches with Zotero
-2. **Performance**: Processes typical researcher profile (50-100 publications) in <30 seconds
-3. **Usability**: Single command execution with clear output
-4. **Reliability**: Handles network failures gracefully
-
-### Risk Mitigation
-
-#### Technical Risks
-- **Web scraping fragility**: Start with stable APIs (ORCID), add scraping incrementally
-- **libcurl ISO C binding complexity**: Use proven patterns from fortran-curl project
-- **Memory management in C interop**: Careful handling of allocatable strings and cleanup
-- **JSON parsing**: Implement minimal parser for needed fields only
-
-#### Scope Risks
-- **Feature creep**: Strict MVP focus, defer advanced matching algorithms
-- **Perfect matching**: Accept simple heuristics initially
-- **Universal source support**: Start with 1-2 sources, expand later
-
-### Development Priority
-
-1. **Core CLI framework** (args, config, basic flow)
-2. **libcurl ISO C bindings** (direct library integration)
-3. **HTTP client wrapper** (high-level interface over libcurl)
-4. **Single URL source parser** (ORCID API - most structured)
-5. **Basic Zotero integration** (retrieve publications)
-6. **Simple analysis** (exact title/DOI matching)
-7. **Text report generation**
-8. **Additional source support** (Scholar, Pure)
-
-### Future Enhancements (Post-MVP)
-- Fuzzy publication matching using Claude CLI
-- Interactive publication review mode
-- Configuration file support
-- Batch processing multiple researchers
-- Integration with reference managers beyond Zotero
-- Publication impact metrics
-- Citation network analysis
-
-This MVP design prioritizes rapid delivery of core functionality while establishing a solid foundation for future enhancements.
+- **Accuracy**: > 95% correct matching
+- **Performance**: < 30s for typical researcher profile
+- **Reliability**: Graceful handling of API failures
+- **Usability**: Intuitive CLI with helpful error messages

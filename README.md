@@ -1,166 +1,197 @@
-# puby
+# Puby - Publication List Management Tool
 
-Publication List Management Tool - Compare publications across Google Scholar, ORCID, Pure, and Zotero.
+A Python tool for researchers to manage and synchronize their publication lists across multiple sources.
+
+## Features
+
+- 📚 Fetch publications from multiple sources (ORCID, Google Scholar, Pure portals)
+- 🔄 Synchronize with Zotero libraries
+- 🔍 Identify missing publications and duplicates
+- 📊 Multiple output formats (table, JSON, CSV, BibTeX)
+- 🎨 Clean command-line interface with colored output
+- 🚀 Fast and efficient publication matching
 
 ## Installation
 
-Build from source using Fortran Package Manager:
-
 ```bash
-fpm build
+pip install puby
 ```
 
-Install system-wide:
+Or install from source:
 
 ```bash
-fpm install --prefix ~/.local
+git clone https://github.com/krystophny/puby.git
+cd puby
+pip install -e .
 ```
 
-Add `~/.local/bin` to your PATH if not already present.
+## Quick Start
 
-## Basic Usage
+### Basic Usage
+
+Compare your ORCID publications with your Zotero library:
 
 ```bash
-# Compare Scholar and ORCID with Zotero group
-puby check --scholar=https://scholar.google.com/citations?user=abc123 \
-           --orcid=https://orcid.org/0000-1234-5678-9012 \
-           --zotero=12345
+puby check --orcid https://orcid.org/0000-0003-4773-416X --zotero 12345
+```
 
-# Check only ORCID against Zotero with API key
-puby check --orcid=https://orcid.org/0000-1234-5678-9012 \
-           --zotero=12345 --api-key=YOUR_ZOTERO_API_KEY
+### Multiple Sources
 
-# Display help
-puby --help
+Check publications from multiple sources:
+
+```bash
+puby check \
+  --scholar https://scholar.google.com/citations?user=ABC123 \
+  --orcid https://orcid.org/0000-0003-4773-416X \
+  --pure https://pure.university.edu/person/john-doe \
+  --zotero 12345 \
+  --api-key YOUR_ZOTERO_API_KEY
+```
+
+### Output Formats
+
+Export results in different formats:
+
+```bash
+# Table format (default)
+puby check --orcid https://orcid.org/0000-0003-4773-416X --zotero 12345
+
+# JSON format
+puby check --orcid https://orcid.org/0000-0003-4773-416X --zotero 12345 --format json
+
+# CSV format
+puby check --orcid https://orcid.org/0000-0003-4773-416X --zotero 12345 --format csv
+
+# BibTeX format
+puby check --orcid https://orcid.org/0000-0003-4773-416X --zotero 12345 --format bibtex
 ```
 
 ## Command Line Options
 
-| Option | Required | Description |
-|--------|----------|-------------|
-| `--scholar=URL` | No* | Google Scholar profile URL |
-| `--orcid=URL` | No* | ORCID profile URL |
-| `--pure=URL` | No* | Pure research portal URL |
-| `--zotero=GROUP` | Yes | Zotero group ID |
-| `--api-key=KEY` | No | Zotero API key for private groups |
-| `--help`, `-h` | No | Show help message |
+### `puby check`
 
-*At least one source URL must be provided.
+Compare publications across sources and identify missing or duplicate entries.
 
-## Examples
+| Option | Description | Required |
+|--------|-------------|----------|
+| `--scholar URL` | Google Scholar profile URL | No |
+| `--orcid URL` | ORCID profile URL | No |
+| `--pure URL` | Pure research portal URL | No |
+| `--zotero ID` | Zotero group or library ID | Yes |
+| `--api-key KEY` | Zotero API key (for private libraries) | No |
+| `--format FORMAT` | Output format: table, json, csv, bibtex | No |
+| `--verbose` | Enable verbose output | No |
 
-### Compare Multiple Sources
+**Note**: At least one source URL (--scholar, --orcid, or --pure) must be provided.
 
-```bash
-puby check \
-  --scholar=https://scholar.google.com/citations?user=abc123 \
-  --orcid=https://orcid.org/0000-1234-5678-9012 \
-  --pure=https://pure.example.edu/en/persons/researcher \
-  --zotero=12345 \
-  --api-key=YOUR_API_KEY
-```
+## Configuration
 
-### Scholar Only Comparison
+### Zotero API Key
 
-```bash
-puby check \
-  --scholar=https://scholar.google.com/citations?user=abc123 \
-  --zotero=12345
-```
+To access private Zotero libraries, you'll need an API key:
 
-### ORCID Only with Private Group
+1. Log in to [Zotero](https://www.zotero.org)
+2. Go to Settings → Feeds/API
+3. Create a new API key with read permissions
+4. Use the key with `--api-key` option
+
+### Environment Variables
+
+You can set default values using environment variables:
 
 ```bash
-puby check \
-  --orcid=https://orcid.org/0000-1234-5678-9012 \
-  --zotero=12345 \
-  --api-key=YOUR_PRIVATE_API_KEY
+export PUBY_ZOTERO_API_KEY=your_api_key
+export PUBY_ZOTERO_LIBRARY=your_library_id
 ```
 
-## HTTP Client API
+## Development
 
-puby includes a Fortran HTTP client built on libcurl for API integration:
+### Setup Development Environment
 
-```fortran
-program example
-    use puby_http
-    implicit none
-    
-    type(http_client_t) :: client
-    type(http_response_t) :: response
-    
-    ! Initialize client with default settings
-    call http_client_init(client)
-    
-    ! Make a GET request
-    call http_get(client, "https://httpbin.org/get", response)
-    if (response%success .and. response%status_code == 200) then
-        print *, "Response body: ", response%body
-    end if
-    
-    ! Make a POST request with form data
-    call http_post(client, "https://httpbin.org/post", "key=value", response)
-    
-    ! Cleanup
-    call http_client_cleanup(client)
-end program
-```
-
-### Custom Configuration
-
-```fortran
-type(http_config_t) :: config
-type(http_client_t) :: client
-
-! Configure client settings
-call http_config_init(config, &
-    user_agent="MyApp/1.0", &
-    timeout=60, &
-    follow_redirects=.true., &
-    verify_ssl=.true.)
-
-! Initialize client with custom config
-call http_client_init(client, config)
-
-! Use client...
-
-call http_client_cleanup(client)
-call http_config_cleanup(config)
-```
-
-## Requirements
-
-- Fortran compiler (gfortran recommended)
-- Fortran Package Manager (fpm)
-- libcurl development headers and libraries
-- At least one publication source URL
-- Zotero group ID
-
-### Installing libcurl
-
-Ubuntu/Debian:
 ```bash
-sudo apt-get install libcurl4-openssl-dev
+# Clone repository
+git clone https://github.com/krystophny/puby.git
+cd puby
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install in development mode with dependencies
+pip install -e ".[dev]"
 ```
 
-RedHat/CentOS/Fedora:
+### Run Tests
+
 ```bash
-sudo yum install libcurl-devel
-# or
-sudo dnf install libcurl-devel
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=puby
+
+# Run specific test file
+pytest tests/test_matcher.py
 ```
 
-macOS:
+### Code Quality
+
 ```bash
-brew install curl
+# Format code
+black puby tests
+
+# Lint code
+ruff check puby tests
+
+# Type checking
+mypy puby
 ```
 
-## URL Formats
+## Architecture
 
-Valid URL formats for each source:
+Puby uses a modular architecture with clear separation of concerns:
 
-- **Google Scholar**: `https://scholar.google.com/citations?user=USER_ID`
-- **ORCID**: `https://orcid.org/0000-XXXX-XXXX-XXXX`
-- **Pure**: Any HTTPS URL pointing to a Pure research portal profile
+- **CLI** (`cli.py`): Command-line interface using Click
+- **Models** (`models.py`): Data models for publications and authors
+- **Sources** (`sources.py`): Adapters for different publication sources
+- **Matcher** (`matcher.py`): Publication matching and comparison logic
+- **Reporter** (`reporter.py`): Output formatting and reporting
+- **Client** (`client.py`): Main client coordinating operations
 
-All URLs must start with `http://` or `https://` and contain content after the protocol.
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Built with [Click](https://click.palletsprojects.com/) for the CLI
+- Uses [pyzotero](https://github.com/urschrei/pyzotero) for Zotero integration
+- ORCID API for publication data
+- Community contributors
+
+## Support
+
+For issues and questions:
+- Open an issue on [GitHub](https://github.com/krystophny/puby/issues)
+- Check the [documentation](https://github.com/krystophny/puby/wiki)
+
+## Roadmap
+
+- [ ] Google Scholar integration (via scholarly library)
+- [ ] Pure portal API support (institution-specific)
+- [ ] Automatic duplicate merging
+- [ ] Publication metadata enhancement
+- [ ] Web interface
+- [ ] Batch operations support
+- [ ] Export to multiple formats simultaneously
+- [ ] Citation count tracking
