@@ -201,11 +201,8 @@ class ZoteroConfig:
         if self.library_type == "group" and not self.group_id:
             errors.append("Group ID is required for group library type")
 
-        if self.library_type == "user" and not self.group_id:
-            errors.append(
-                "User ID is required for user library type. "
-                "Find your user ID at: https://www.zotero.org/settings/keys"
-            )
+        # User ID is now optional for user libraries (will be auto-discovered)
+        # No validation error for missing user ID
 
         return errors
 

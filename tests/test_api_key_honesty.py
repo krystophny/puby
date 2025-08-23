@@ -6,7 +6,8 @@ from click.testing import CliRunner
 from pyzotero.zotero_errors import UserNotAuthorisedError
 
 from puby.cli import cli
-from puby.sources import ZoteroSource, ZoteroLibrary
+from puby.legacy_sources import ZoteroLibrary
+from puby.sources import ZoteroSource
 from puby.models import ZoteroConfig
 
 
@@ -32,7 +33,8 @@ class TestZoteroAPIKeyHonesty:
         config = ZoteroConfig(api_key="valid_key_123", group_id="123456")
         assert config.is_valid()
 
-    def test_zotero_source_validates_config(self):
+    @patch('puby.sources.requests.get')
+    def test_zotero_source_validates_config(self, mock_get):
         """Test that ZoteroSource rejects invalid configurations."""
         # Missing API key
         invalid_config = ZoteroConfig(api_key="", group_id="123456")
@@ -40,10 +42,16 @@ class TestZoteroAPIKeyHonesty:
         with pytest.raises(ValueError, match="Invalid Zotero configuration.*API key is required"):
             ZoteroSource(invalid_config)
 
-        # Missing user ID for user library
-        invalid_config = ZoteroConfig(api_key="valid_key", library_type="user")
+        # Test auto-discovery failure with invalid API key
+        invalid_config = ZoteroConfig(api_key="invalid_key", library_type="user")
         
-        with pytest.raises(ValueError, match="User ID is required for user library type"):
+        # Mock failed auto-discovery
+        mock_response = Mock()
+        mock_response.status_code = 403
+        mock_response.raise_for_status.side_effect = Exception("403 Forbidden")
+        mock_get.return_value = mock_response
+        
+        with pytest.raises(ValueError, match="Failed to auto-discover user ID"):
             ZoteroSource(invalid_config)
 
     def test_zotero_library_handles_missing_api_key_gracefully(self):
