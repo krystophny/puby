@@ -13,9 +13,9 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
-- [ ] #22: fix: Zotero connection validation missing (branch: fix-22-zotero-connection-validation)
 
 ## DONE (Completed)
+- [x] #22: fix: Zotero connection validation missing (PR #38)
 - [x] #28: feat: add Zotero user ID auto-discovery from API key (PR #37)
 - [x] #30: feat: add .env file support for API keys (PR #36)
 - [x] #34: bug: be honest about missing API keys - never fake functionality (PR #35)
