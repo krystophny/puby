@@ -129,7 +129,7 @@ class PureSource(PublicationSource):
                 # Look for next page
                 next_url = self._find_next_page_url(soup)
                 if next_url:
-                    current_url = urljoin(self.base_domain, next_url)
+                    current_url = urljoin(current_url, next_url)
                 else:
                     break
 
@@ -147,7 +147,7 @@ class PureSource(PublicationSource):
         """Find URL for next page of results."""
         # Look for common Pure pagination patterns
         next_links = soup.find_all(
-            "a", string=re.compile(r"next|Next|NEXT|>", re.IGNORECASE)
+            "a", string=re.compile(r"next|Next|NEXT|Load more|>", re.IGNORECASE)
         )
         for link in next_links:
             href = link.get("href")
@@ -169,10 +169,18 @@ class PureSource(PublicationSource):
         publications = []
 
         # Look for publication containers - Pure uses various CSS classes
+        # First try to find individual publication items (more specific)
         containers = soup.find_all(
             ["div", "article"],
-            class_=re.compile(r"result|publication|research-output", re.IGNORECASE),
+            class_=re.compile(r"rendering_contributiontojournal", re.IGNORECASE),
         )
+        
+        # If no specific containers found, try broader search
+        if not containers:
+            containers = soup.find_all(
+                ["div", "article"],
+                class_=re.compile(r"result|publication|research-output", re.IGNORECASE),
+            )
 
         for container in containers:
             try:
@@ -241,19 +249,29 @@ class PureSource(PublicationSource):
         """Extract authors from publication container."""
         authors = []
 
-        # Look for author information
-        author_selectors = [".authors", '[class*="author"]', ".person-name"]
-
-        for selector in author_selectors:
-            author_elements = container.select(selector)
-            for elem in author_elements:
+        # Look for author information - check for individual name spans first
+        name_elements = container.select(".persons .name, .persons span.name")
+        if name_elements:
+            for elem in name_elements:
                 author_text = elem.get_text(strip=True)
-                if author_text:
-                    # Simple author name splitting
-                    author_names = [name.strip() for name in author_text.split(",")]
-                    for name in author_names:
-                        if name and not name.lower().startswith(("and", "&")):
-                            authors.append(Author(name=name))
+                if author_text and not author_text.lower().startswith(("and", "&")):
+                    authors.append(Author(name=author_text))
+        else:
+            # Fall back to broader selectors
+            author_selectors = [".authors", '[class*="author"]', ".person-name", ".persons"]
+            
+            for selector in author_selectors:
+                author_elements = container.select(selector)
+                for elem in author_elements:
+                    author_text = elem.get_text(strip=True)
+                    if author_text:
+                        # Simple author name splitting
+                        author_names = [name.strip() for name in author_text.split(",")]
+                        for name in author_names:
+                            if name and not name.lower().startswith(("and", "&")):
+                                authors.append(Author(name=name))
+                if authors:  # Stop if we found authors
+                    break
 
         return authors
 
