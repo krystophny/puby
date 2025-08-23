@@ -1,9 +1,9 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #10: feat: add Pure research portal support
 
 ## DOING (Current Work)
+- [x] #10: feat: add Pure research portal support (branch: feat-pure-portal-10)
 
 ## DONE (Completed)
 - [x] #9: feat: add Google Scholar profile parsing support (PR #19)
