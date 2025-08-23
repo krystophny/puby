@@ -204,6 +204,9 @@ class ZoteroConfig:
 
         if self.library_type == "group" and not self.group_id:
             errors.append("Group ID is required for group library type")
+        
+        if self.library_type == "user" and not self.group_id:
+            errors.append("User ID is required for user library type")
 
         return errors
 

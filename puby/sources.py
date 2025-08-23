@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 import requests
 from pyzotero import zotero
 
-from .models import Author, Publication
+from .models import Author, Publication, ZoteroConfig
 
 
 class PublicationSource(ABC):
@@ -199,7 +199,10 @@ class PureSource(PublicationSource):
 
 
 class ZoteroLibrary(PublicationSource):
-    """Fetch publications from Zotero library."""
+    """Fetch publications from Zotero library.
+    
+    NOTE: This is legacy implementation. Use ZoteroSource instead for new code.
+    """
 
     def __init__(self, library_id: str, api_key: Optional[str] = None):
         """Initialize Zotero library source."""
@@ -293,6 +296,141 @@ class ZoteroLibrary(PublicationSource):
             return Publication(
                 title=title,
                 authors=authors if authors else [Author(name="[No authors]")],
+                year=year,
+                journal=data.get("publicationTitle"),
+                volume=data.get("volume"),
+                issue=data.get("issue"),
+                pages=data.get("pages"),
+                doi=data.get("DOI"),
+                url=data.get("url"),
+                abstract=data.get("abstractNote"),
+                publication_type=item_type,
+                source="Zotero",
+                raw_data=data,
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error parsing Zotero item: {e}")
+            return None
+
+
+class ZoteroSource(PublicationSource):
+    """Modern Zotero API client using ZoteroConfig."""
+
+    def __init__(self, config: ZoteroConfig):
+        """Initialize Zotero source with configuration."""
+        if not config.is_valid():
+            errors = ", ".join(config.validation_errors())
+            raise ValueError(f"Invalid Zotero configuration: {errors}")
+        
+        self.config = config
+        self.logger = logging.getLogger(__name__)
+        
+        # Initialize Zotero API client  
+        try:
+            if self.config.library_type == "group":
+                if not self.config.group_id:
+                    raise ValueError("Group ID required for group library type")
+                library_id = self.config.group_id
+            else:
+                # For user libraries, use group_id field as user_id
+                # If no user_id provided, we cannot proceed (pyzotero needs explicit user ID)
+                if not self.config.group_id:
+                    raise ValueError(
+                        "User ID is required for user library type. "
+                        "Please provide your numeric user ID in the group_id field."
+                    )
+                library_id = self.config.group_id
+            
+            self.zot = zotero.Zotero(
+                library_id, 
+                self.config.library_type, 
+                self.config.api_key
+            )
+        except Exception as e:
+            raise ValueError(f"Failed to initialize Zotero client: {e}") from e
+
+    def fetch(self) -> List[Publication]:
+        """Fetch publications from Zotero library with pagination support."""
+        publications = []
+
+        try:
+            # Use everything() to handle pagination automatically
+            # This fetches all items in batches, handling Zotero's pagination
+            items = self.zot.everything(self.zot.top())
+            
+            self.logger.info(f"Retrieved {len(items)} items from Zotero")
+
+            for item in items:
+                pub = self._parse_zotero_item(item)
+                if pub:
+                    publications.append(pub)
+
+        except Exception as e:
+            self.logger.error(f"Error fetching Zotero data: {e}")
+            return []
+
+        self.logger.info(f"Parsed {len(publications)} publications from Zotero")
+        return publications
+
+    def _parse_zotero_item(self, item: Dict[str, Any]) -> Optional[Publication]:
+        """Parse Zotero item into Publication."""
+        try:
+            data = item.get("data", {})
+
+            # Skip non-publication items
+            item_type = data.get("itemType", "")
+            if item_type not in [
+                "journalArticle",
+                "book", 
+                "bookSection",
+                "conferencePaper",
+                "thesis",
+                "report",
+                "preprint",
+            ]:
+                return None
+
+            # Extract title
+            title = data.get("title", "").strip()
+            if not title:
+                return None
+
+            # Extract authors
+            authors = []
+            creators = data.get("creators", [])
+            for creator in creators:
+                if creator.get("creatorType") == "author":
+                    first_name = creator.get("firstName", "").strip()
+                    last_name = creator.get("lastName", "").strip()
+                    
+                    if last_name or first_name:
+                        full_name = f"{first_name} {last_name}".strip()
+                        authors.append(
+                            Author(
+                                name=full_name,
+                                given_name=first_name or None,
+                                family_name=last_name or None,
+                            )
+                        )
+
+            # If no authors found, add placeholder
+            if not authors:
+                authors = [Author(name="[No authors]")]
+
+            # Extract publication year from date field
+            year = None
+            date_str = data.get("date", "")
+            if date_str:
+                # Extract 4-digit year from various date formats
+                import re
+                year_match = re.search(r"\d{4}", date_str)
+                if year_match:
+                    year = int(year_match.group())
+
+            return Publication(
+                title=title,
+                authors=authors,
                 year=year,
                 journal=data.get("publicationTitle"),
                 volume=data.get("volume"),
