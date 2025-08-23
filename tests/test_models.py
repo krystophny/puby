@@ -184,11 +184,22 @@ class TestZoteroConfig:
         errors = config.validation_errors()
         assert "Library type must be 'user' or 'group'" in errors
 
-    def test_zotero_config_validation_user_type_no_group_id(self):
-        """Test user library type validation."""
-        config = ZoteroConfig(api_key="valid_key", library_type="user")
+    def test_zotero_config_validation_user_type_with_user_id(self):
+        """Test user library type validation with user ID."""
+        config = ZoteroConfig(
+            api_key="valid_key", 
+            group_id="12345",  # This is user_id for user libraries
+            library_type="user"
+        )
         assert config.is_valid()
         assert len(config.validation_errors()) == 0
+
+    def test_zotero_config_validation_user_type_missing_user_id(self):
+        """Test user library type validation without user ID."""
+        config = ZoteroConfig(api_key="valid_key", library_type="user")
+        assert not config.is_valid()
+        errors = config.validation_errors()
+        assert "User ID is required for user library type" in errors
 
     def test_zotero_config_validation_group_type_missing_group_id(self):
         """Test group library type validation without group ID."""
