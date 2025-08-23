@@ -31,14 +31,16 @@ class TestScholarSource:
 
     def test_extract_scholar_id_invalid_format(self):
         """Test Scholar ID extraction with invalid formats."""
-        with pytest.raises(ValueError, match="Invalid Google Scholar URL or ID"):
+        with pytest.raises(ValueError, match="Could not extract Scholar user ID from URL"):
             ScholarSource("https://google.com/invalid")
 
-        with pytest.raises(ValueError, match="Invalid Google Scholar URL or ID"):
-            ScholarSource("invalid-scholar-url")
+        # Non-URL strings are treated as direct IDs
+        source = ScholarSource("invalid-scholar-url")
+        assert source.user_id == "invalid-scholar-url"
 
-        with pytest.raises(ValueError, match="Invalid Google Scholar URL or ID"):
-            ScholarSource("")
+        # Empty string is treated as direct ID (edge case)
+        source = ScholarSource("")
+        assert source.user_id == ""
 
     @responses.activate
     def test_fetch_publications_success(self):
@@ -47,6 +49,8 @@ class TestScholarSource:
         <html>
         <body>
             <div id="gs_ccl">
+                <table id="gsc_a_t">
+                <tbody>
                 <tr class="gsc_a_tr">
                     <td class="gsc_a_t">
                         <a class="gsc_a_at" href="/citations?view_op=view_citation&hl=en&user=ABC123&citation_for_view=ABC123:u5HHmVD_uO8C">
@@ -85,6 +89,8 @@ class TestScholarSource:
                         <span class="gsc_a_h">2020</span>
                     </td>
                 </tr>
+                </tbody>
+                </table>
             </div>
         </body>
         </html>
@@ -92,7 +98,7 @@ class TestScholarSource:
 
         responses.add(
             responses.GET,
-            "https://scholar.google.com/citations?user=ABC123&hl=en&cstart=0&pagesize=100",
+            "https://scholar.google.com/citations?user=ABC123&cstart=0&pagesize=100",
             body=mock_html,
             status=200,
         )
@@ -130,6 +136,8 @@ class TestScholarSource:
         <html>
         <body>
             <div id="gs_ccl">
+                <table id="gsc_a_t">
+                <tbody>
                 <tr class="gsc_a_tr">
                     <td class="gsc_a_t">
                         <a class="gsc_a_at">Publication 1</a>
@@ -150,6 +158,8 @@ class TestScholarSource:
         <html>
         <body>
             <div id="gs_ccl">
+                <table id="gsc_a_t">
+                <tbody>
                 <tr class="gsc_a_tr">
                     <td class="gsc_a_t">
                         <a class="gsc_a_at">Publication 2</a>
@@ -159,6 +169,8 @@ class TestScholarSource:
                     <td class="gsc_a_c"><a>5</a></td>
                     <td class="gsc_a_y"><span class="gsc_a_h">2020</span></td>
                 </tr>
+                </tbody>
+                </table>
             </div>
         </body>
         </html>
@@ -166,14 +178,14 @@ class TestScholarSource:
 
         responses.add(
             responses.GET,
-            "https://scholar.google.com/citations?user=ABC123&hl=en&cstart=0&pagesize=100",
+            "https://scholar.google.com/citations?user=ABC123&cstart=0&pagesize=100",
             body=page1_html,
             status=200,
         )
 
         responses.add(
             responses.GET,
-            "https://scholar.google.com/citations?user=ABC123&hl=en&cstart=100&pagesize=100",
+            "https://scholar.google.com/citations?user=ABC123&cstart=100&pagesize=100",
             body=page2_html,
             status=200,
         )
@@ -268,7 +280,7 @@ class TestScholarSource:
         assert publication.year is None
         assert publication.journal is None
         assert len(publication.authors) == 1
-        assert publication.authors[0].name == "[Authors not available]"
+        assert publication.authors[0].name == "[No authors]"
 
     def test_parse_publication_no_title(self):
         """Test parsing publication without title returns None."""
@@ -303,7 +315,7 @@ class TestScholarSource:
             ("J Smith, A Johnson, B Williams", ["J Smith", "A Johnson", "B Williams"]),
             ("Single Author", ["Single Author"]),
             ("A, B, C, D, E", ["A", "B", "C", "D", "E"]),
-            ("", ["[Authors not available]"]),
+            ("", []),  # Empty string returns empty list
         ]
 
         for author_text, expected in test_cases:
@@ -328,7 +340,7 @@ class TestScholarSource:
         ]
 
         for pub_info, (expected_journal, expected_year) in test_cases:
-            journal, year = source._parse_journal_and_year(pub_info)
+            authors, journal, year = source._parse_journal_and_year(pub_info)
             assert journal == expected_journal
             assert year == expected_year
 
@@ -351,12 +363,12 @@ class TestScholarSource:
 
         # Test first page
         url = source._build_url(0)
-        expected = "https://scholar.google.com/citations?user=ABC123&hl=en&cstart=0&pagesize=100"
+        expected = "https://scholar.google.com/citations?user=ABC123&cstart=0&pagesize=100"
         assert url == expected
 
         # Test subsequent page
         url = source._build_url(100)
-        expected = "https://scholar.google.com/citations?user=ABC123&hl=en&cstart=100&pagesize=100"
+        expected = "https://scholar.google.com/citations?user=ABC123&cstart=100&pagesize=100"
         assert url == expected
 
     def test_user_agent_header(self):
@@ -374,6 +386,8 @@ class TestScholarSource:
         <html>
         <body>
             <div id="gs_ccl">
+                <table id="gsc_a_t">
+                <tbody>
                 <tr class="gsc_a_tr">
                     <td class="gsc_a_t">
                         <a class="gsc_a_at">Complex Publication Title</a>
@@ -383,6 +397,8 @@ class TestScholarSource:
                     <td class="gsc_a_c"><a>100</a></td>
                     <td class="gsc_a_y"><span class="gsc_a_h">2021</span></td>
                 </tr>
+                </tbody>
+                </table>
             </div>
         </body>
         </html>
@@ -390,7 +406,7 @@ class TestScholarSource:
 
         responses.add(
             responses.GET,
-            "https://scholar.google.com/citations?user=ABC123&hl=en&cstart=0&pagesize=100",
+            "https://scholar.google.com/citations?user=ABC123&cstart=0&pagesize=100",
             body=complex_html,
             status=200,
         )

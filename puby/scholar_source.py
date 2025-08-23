@@ -205,28 +205,48 @@ class ScholarSource(PublicationSource):
         self, title_cell: Union[Tag, Any]
     ) -> tuple[List[Author], Optional[str], Optional[int]]:
         """Extract authors, journal, and year from title cell."""
-        # Get all text and split by lines
-        cell_text = title_cell.get_text("\n", strip=True)
-        lines = [line.strip() for line in cell_text.split("\n") if line.strip()]
-
         authors = []
         journal = None
         year = None
 
-        # Process lines after title (first line)
-        for line in lines[1:]:
-            if not line:
-                continue
-
-            # Try to parse as author/journal/year line
-            authors_temp, journal_temp, year_temp = self._parse_journal_and_year(line)
-
-            if authors_temp:
-                authors.extend(authors_temp)
-            if journal_temp:
-                journal = journal_temp
-            if year_temp:
-                year = year_temp
+        # Look for gray text divs which contain metadata
+        gray_divs = title_cell.find_all("div", {"class": "gs_gray"})
+        
+        if gray_divs:
+            # Usually first gray div is authors, second is journal info
+            for i, div in enumerate(gray_divs):
+                text = div.get_text(strip=True)
+                if not text:
+                    continue
+                    
+                if i == 0:
+                    # First gray div is typically authors
+                    authors = self._parse_authors(text)
+                elif i == 1:
+                    # Second gray div is typically journal info
+                    _, journal_temp, year_temp = self._parse_journal_and_year(text)
+                    if journal_temp:
+                        journal = journal_temp
+                    if year_temp:
+                        year = year_temp
+        else:
+            # Fallback to text parsing if no gray divs
+            cell_text = title_cell.get_text("\n", strip=True)
+            lines = [line.strip() for line in cell_text.split("\n") if line.strip()]
+            
+            for line in lines[1:]:  # Skip title (first line)
+                if not line:
+                    continue
+                    
+                # Try to parse as author/journal/year line
+                authors_temp, journal_temp, year_temp = self._parse_journal_and_year(line)
+                
+                if authors_temp:
+                    authors.extend(authors_temp)
+                if journal_temp:
+                    journal = journal_temp
+                if year_temp:
+                    year = year_temp
 
         return authors, journal, year
 
@@ -273,33 +293,28 @@ class ScholarSource(PublicationSource):
             except ValueError:
                 pass
 
-        # The remaining text could be authors and journal
-        # This is a simplified approach - Scholar's format varies
+        # Remove common page/volume patterns to clean up journal name
+        # Patterns: "15 (4), 123-130" or "400, 109001" or similar
+        pub_info = re.sub(r"\s*\d+\s*\(\d+\)\s*,?\s*\d+-\d+\s*,?", "", pub_info).strip()
+        pub_info = re.sub(r"\s+\d+,\s*\d+", "", pub_info).strip()  # Remove "400, 109001" pattern
+        pub_info = re.sub(r"\s+arXiv:\S+", "", pub_info).strip()  # Remove arXiv ID
+        pub_info = re.sub(r",\s*$", "", pub_info).strip()  # Remove trailing comma
+        
+        # The remaining text is likely the journal name
         if pub_info:
-            # If it looks like a journal name (has common journal words)
+            # Check if it looks like journal/publication info vs authors
+            # Journal names often have these indicators or are longer
             journal_indicators = [
-                "journal",
-                "proceedings",
-                "conference",
-                "review",
-                "letters",
-                "transactions",
+                "journal", "proceedings", "conference", "review", 
+                "letters", "transactions", "physics", "nature", 
+                "science", "arxiv", "preprint", "book"
             ]
+            
+            # If it contains journal indicators, treat as journal
             if any(indicator in pub_info.lower() for indicator in journal_indicators):
                 journal = pub_info.strip()
-            else:
-                # Might be authors or a mix - for now, treat as journal
-                # A more sophisticated parser would be needed for better results
-                if "," in pub_info:
-                    # Looks like authors (comma-separated)
-                    authors = self._parse_authors(pub_info)
-                else:
-                    # Single author or journal name
-                    if len(pub_info) > 50 or any(
-                        word in pub_info.lower() for word in journal_indicators
-                    ):
-                        journal = pub_info.strip()
-                    else:
-                        authors = [Author(name=pub_info.strip())]
+            # If it doesn't look like a comma-separated list of names, also treat as journal
+            elif not re.match(r"^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:,\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)*$", pub_info):
+                journal = pub_info.strip()
 
         return authors, journal, year

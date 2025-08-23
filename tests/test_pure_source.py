@@ -17,10 +17,10 @@ class TestPureSource:
 
     def test_init_with_invalid_url(self):
         """Test initialization with invalid URL."""
-        with pytest.raises(ValueError, match="Invalid Pure portal URL"):
+        with pytest.raises(ValueError, match="Pure URL must start with http:// or https://"):
             PureSource("")
 
-        with pytest.raises(ValueError, match="Invalid Pure portal URL"):
+        with pytest.raises(ValueError, match="Pure URL must start with http:// or https://"):
             PureSource("not-a-url")
 
     @responses.activate
@@ -322,14 +322,26 @@ class TestPureSource:
     def test_rate_limiting(self):
         """Test that rate limiting is applied between requests."""
         base_url = "https://research.example.edu/en/persons/john-doe"
+        
+        # Mock API endpoint to force fallback to HTML scraping
+        api_url = "https://research.example.edu/ws/api/persons/john-doe/research-outputs"
+        responses.add(responses.GET, api_url, status=404)
 
         # Set up pagination to force multiple requests
         page1_html = """<html><body><div class="rendering rendering_person">
-                        <div class="result-container"></div>
-                        <div class="load-more"><a href="?page=2">Load more</a></div>
+                        <div class="result-container">
+                            <div class="rendering_contribution">
+                                <h3><a href="/pub1">Test Publication 1</a></h3>
+                            </div>
+                        </div>
+                        <div class="pagination"><a href="?page=2">Next</a></div>
                         </div></body></html>"""
         page2_html = """<html><body><div class="rendering rendering_person">
-                        <div class="result-container"></div></div></body></html>"""
+                        <div class="result-container">
+                            <div class="rendering_contribution">
+                                <h3><a href="/pub2">Test Publication 2</a></h3>
+                            </div>
+                        </div></div></body></html>"""
 
         responses.add(responses.GET, base_url, body=page1_html, status=200)
         responses.add(responses.GET, f"{base_url}?page=2", body=page2_html, status=200)
@@ -344,5 +356,5 @@ class TestPureSource:
         end_time = time.time()
         elapsed = end_time - start_time
 
-        # Should have at least minimal delay between requests
-        assert elapsed >= 1.0  # At least 1 second for rate limiting
+        # Should have at least minimal delay between requests (2 seconds per page)
+        assert elapsed >= 2.0  # At least 2 seconds for rate limiting
