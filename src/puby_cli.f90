@@ -93,31 +93,27 @@ contains
                 end if
                 
                 select case (key)
-                case ('scholar')
+                case ('scholar', 'orcid', 'pure')
                     if (.not. validate_url(value)) then
-                        config%error_message = 'Invalid Scholar URL: ' // value
+                        select case (key)
+                        case ('scholar')
+                            config%error_message = 'Invalid Scholar URL: ' // value
+                        case ('orcid')
+                            config%error_message = 'Invalid ORCID URL: ' // value
+                        case ('pure')
+                            config%error_message = 'Invalid Pure URL: ' // value
+                        end select
                         config%valid = .false.
                         return
                     end if
-                    config%scholar_url = value
-                    has_source_url = .true.
-                    
-                case ('orcid')
-                    if (.not. validate_url(value)) then
-                        config%error_message = 'Invalid ORCID URL: ' // value
-                        config%valid = .false.
-                        return
-                    end if
-                    config%orcid_url = value
-                    has_source_url = .true.
-                    
-                case ('pure')
-                    if (.not. validate_url(value)) then
-                        config%error_message = 'Invalid Pure URL: ' // value
-                        config%valid = .false.
-                        return
-                    end if
-                    config%pure_url = value
+                    select case (key)
+                    case ('scholar')
+                        config%scholar_url = value
+                    case ('orcid') 
+                        config%orcid_url = value
+                    case ('pure')
+                        config%pure_url = value
+                    end select
                     has_source_url = .true.
                     
                 case ('zotero')
@@ -140,8 +136,15 @@ contains
         end do
         
         ! Validate required configuration
+        call validate_config_requirements(config, has_required_config, &
+            has_source_url)
+    end subroutine parse_arguments_from_array
+
+    subroutine validate_config_requirements(config, has_required_config, &
+        has_source_url)
+        type(cli_config_t), intent(inout) :: config
+        logical, intent(in) :: has_required_config, has_source_url
         
-        ! Validate required configuration
         if (.not. has_required_config) then
             config%error_message = &
                 'Missing required Zotero configuration. Use --zotero=GROUP_ID'
@@ -157,7 +160,7 @@ contains
         end if
         
         config%valid = .true.
-    end subroutine parse_arguments_from_array
+    end subroutine validate_config_requirements
 
     subroutine parse_key_value_argument(arg, key, value)
         character(len=*), intent(in) :: arg
