@@ -10,6 +10,6 @@
 - [ ] #10: feat: add Pure research portal support
 
 ## DOING (Current Work)
-- [x] #3: feat: implement core publication data types (branch: feat-core-data-types-3)
 
 ## DONE (Completed)
+- [x] #3: feat: implement core publication data types
