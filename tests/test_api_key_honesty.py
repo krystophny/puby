@@ -34,7 +34,7 @@ class TestZoteroAPIKeyHonesty:
         config = ZoteroConfig(api_key="P9NiFoyLeZu2bZNvvuQPDWsd", group_id="123456")
         assert config.is_valid()
 
-    @patch("puby.sources.requests.get")
+    @patch("puby.zotero_source.requests.get")
     def test_zotero_source_validates_config(self, mock_get):
         """Test that ZoteroSource rejects invalid configurations."""
         # Missing API key
@@ -62,7 +62,7 @@ class TestZoteroAPIKeyHonesty:
     def test_zotero_library_handles_missing_api_key_gracefully(self):
         """Test that ZoteroLibrary provides clear error for missing API key."""
         # Test with mock to simulate API key validation failure
-        with patch("puby.sources.zotero.Zotero") as mock_zotero_class:
+        with patch("puby.zotero_source.zotero.Zotero") as mock_zotero_class:
             mock_zotero_class.side_effect = Exception(
                 "API key required for private library"
             )
@@ -72,7 +72,7 @@ class TestZoteroAPIKeyHonesty:
             ):
                 ZoteroLibrary("123456", api_key=None)
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_zotero_source_fetch_unauthorized_error(self, mock_zotero_class):
         """Test that fetch provides clear message on authorization failure."""
         # Setup mock Zotero client
@@ -117,7 +117,7 @@ class TestZoteroAPIKeyHonesty:
         """Test CLI provides clear error for invalid API key."""
         runner = CliRunner()
 
-        with patch("puby.sources.zotero.Zotero") as mock_zotero_class:
+        with patch("puby.zotero_source.zotero.Zotero") as mock_zotero_class:
             # Simulate API key validation failure
             mock_zotero_class.side_effect = Exception("Invalid API key provided")
 
@@ -140,7 +140,7 @@ class TestZoteroAPIKeyHonesty:
                 or "Failed to initialize" in result.output
             )
 
-    @patch("puby.sources.requests.get")
+    @patch("puby.zotero_source.requests.get")
     def test_no_silent_degradation_on_auth_failure(self, mock_get):
         """Test that sources don't silently degrade functionality on auth failures."""
         # Simulate 401 Unauthorized response
@@ -182,7 +182,7 @@ class TestAPIKeyValidation:
         # Should never get to the fetch stage
         # This ensures fail-fast behavior
 
-    @patch("puby.sources.zotero.Zotero")
+    @patch("puby.zotero_source.zotero.Zotero")
     def test_api_key_format_validation(self, mock_zotero_class):
         """Test that API key format is validated if possible."""
         # While we can't validate the actual key without calling the API,
@@ -257,7 +257,7 @@ class TestErrorMessageClarity:
         # This is a meta-test to ensure we're not hiding auth failures
 
         # Test with ZoteroLibrary
-        with patch("puby.sources.zotero.Zotero") as mock_zotero_class:
+        with patch("puby.zotero_source.zotero.Zotero") as mock_zotero_class:
             mock_zotero_class.side_effect = Exception("API key required")
 
             # Should raise, not silently fail

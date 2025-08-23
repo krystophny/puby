@@ -4,7 +4,7 @@ import logging
 from typing import List
 
 from .models import Publication
-from .sources import PublicationSource
+from .base import PublicationSource
 
 
 class PublicationClient:
