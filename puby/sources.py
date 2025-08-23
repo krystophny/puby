@@ -884,15 +884,12 @@ class ZoteroSource(PublicationSource):
                     raise ValueError("Group ID required for group library type")
                 library_id = self.config.group_id
             else:
-                # For user libraries, use group_id field as user_id
-                # If no user_id provided, we cannot proceed (pyzotero needs explicit user ID)
+                # For user libraries, auto-discover user ID if not provided
                 if not self.config.group_id:
-                    raise ValueError(
-                        "User ID is required for user library type. "
-                        "Please provide your numeric user ID in the group_id field. "
-                        "You can find your user ID at: https://www.zotero.org/settings/keys"
-                    )
-                library_id = self.config.group_id
+                    library_id = self._autodiscover_user_id(self.config.api_key)
+                    self.logger.info(f"Auto-discovered user ID: {library_id}")
+                else:
+                    library_id = self.config.group_id
 
             self.zot = zotero.Zotero(
                 library_id, self.config.library_type, self.config.api_key
@@ -908,6 +905,52 @@ class ZoteroSource(PublicationSource):
                 ) from e
             else:
                 raise ValueError(f"Failed to initialize Zotero client: {e}") from e
+
+    def _autodiscover_user_id(self, api_key: str) -> str:
+        """Auto-discover user ID from API key using Zotero API."""
+        url = "https://api.zotero.org/keys/current"
+        headers = {
+            "Zotero-API-Key": api_key,
+            "Accept": "application/json"
+        }
+        
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Extract user ID from response
+            user_id = data.get("userID")
+            if not user_id:
+                raise ValueError(
+                    "Invalid response from Zotero API: missing userID field. "
+                    "Please verify your API key is valid."
+                )
+            
+            return str(user_id)
+            
+        except requests.HTTPError as e:
+            if hasattr(e, 'response') and e.response and e.response.status_code == 403:
+                raise ValueError(
+                    f"Failed to auto-discover user ID: Invalid API key. "
+                    f"Please verify your API key at: https://www.zotero.org/settings/keys"
+                ) from e
+            else:
+                status_code = e.response.status_code if hasattr(e, 'response') and e.response else 'unknown'
+                raise ValueError(
+                    f"Failed to auto-discover user ID: HTTP {status_code} error. "
+                    f"Please check your API key or provide user ID manually."
+                ) from e
+        except requests.ConnectionError as e:
+            raise ValueError(
+                f"Failed to auto-discover user ID: Network error. "
+                f"Please check your internet connection or provide user ID manually."
+            ) from e
+        except Exception as e:
+            raise ValueError(
+                f"Failed to auto-discover user ID: {e}. "
+                f"Please provide user ID manually or check your API key."
+            ) from e
 
     def fetch(self) -> List[Publication]:
         """Fetch publications from Zotero library with pagination support."""

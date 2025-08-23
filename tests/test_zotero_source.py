@@ -3,6 +3,7 @@
 from unittest.mock import Mock, patch
 
 import pytest
+import requests
 
 from puby.models import ZoteroConfig
 from puby.sources import ZoteroSource
@@ -42,6 +43,135 @@ class TestZoteroSource:
         ZoteroSource(config)
 
         mock_zotero.assert_called_once_with("67890", "user", "test_key")
+
+    @patch("puby.sources.requests.get")
+    @patch("puby.sources.zotero.Zotero")
+    def test_zotero_user_id_autodiscovery_success(self, mock_zotero, mock_get):
+        """Test successful user ID auto-discovery from API key."""
+        # Mock the /keys/current endpoint response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "key": "test_api_key",
+            "userID": 123456,
+            "username": "testuser",
+            "access": {
+                "user": {
+                    "library": True,
+                    "notes": True,
+                    "write": True
+                }
+            }
+        }
+        mock_get.return_value = mock_response
+
+        # Create config without user ID
+        config = ZoteroConfig(api_key="test_api_key", library_type="user")
+        source = ZoteroSource(config)
+
+        # Verify the auto-discovery was performed
+        mock_get.assert_called_once_with(
+            "https://api.zotero.org/keys/current",
+            headers={
+                "Zotero-API-Key": "test_api_key",
+                "Accept": "application/json"
+            }
+        )
+
+        # Verify Zotero client was initialized with discovered user ID
+        mock_zotero.assert_called_once_with("123456", "user", "test_api_key")
+
+    @patch("puby.sources.requests.get")
+    @patch("puby.sources.zotero.Zotero")
+    def test_zotero_user_id_autodiscovery_api_error(self, mock_zotero, mock_get):
+        """Test user ID auto-discovery with API error."""
+        # Mock failed API response
+        mock_response = Mock()
+        mock_response.status_code = 403
+        mock_response.text = "Forbidden"
+        
+        # Create HTTPError with response attribute
+        http_error = requests.HTTPError("403 Forbidden")
+        http_error.response = mock_response
+        mock_response.raise_for_status.side_effect = http_error
+        
+        mock_get.return_value = mock_response
+
+        # Create config without user ID
+        config = ZoteroConfig(api_key="invalid_key", library_type="user")
+        
+        # Should raise error with helpful message
+        with pytest.raises(ValueError, match="Failed to auto-discover user ID.*Invalid API key"):
+            ZoteroSource(config)
+
+    @patch("puby.sources.requests.get")
+    @patch("puby.sources.zotero.Zotero")
+    def test_zotero_user_id_explicit_overrides_autodiscovery(self, mock_zotero, mock_get):
+        """Test that explicit user ID is used without auto-discovery."""
+        # Create config with explicit user ID
+        config = ZoteroConfig(
+            api_key="test_api_key", 
+            group_id="999999",  # Explicit user ID
+            library_type="user"
+        )
+        source = ZoteroSource(config)
+
+        # Verify no auto-discovery was performed
+        mock_get.assert_not_called()
+
+        # Verify Zotero client was initialized with explicit user ID
+        mock_zotero.assert_called_once_with("999999", "user", "test_api_key")
+
+    @patch("puby.sources.requests.get")
+    @patch("puby.sources.zotero.Zotero")
+    def test_zotero_group_library_no_autodiscovery(self, mock_zotero, mock_get):
+        """Test that group libraries don't use auto-discovery."""
+        # Create config for group library
+        config = ZoteroConfig(
+            api_key="test_api_key",
+            group_id="12345",
+            library_type="group"
+        )
+        source = ZoteroSource(config)
+
+        # Verify no auto-discovery was performed
+        mock_get.assert_not_called()
+
+        # Verify Zotero client was initialized with group ID
+        mock_zotero.assert_called_once_with("12345", "group", "test_api_key")
+
+    @patch("puby.sources.requests.get")
+    def test_zotero_user_id_autodiscovery_network_error(self, mock_get):
+        """Test user ID auto-discovery with network error."""
+        # Mock network error
+        mock_get.side_effect = requests.ConnectionError("Network error")
+
+        # Create config without user ID
+        config = ZoteroConfig(api_key="test_api_key", library_type="user")
+        
+        # Should raise error with helpful message
+        with pytest.raises(ValueError, match="Failed to auto-discover user ID"):
+            ZoteroSource(config)
+
+    @patch("puby.sources.requests.get")
+    def test_zotero_user_id_autodiscovery_invalid_response(self, mock_get):
+        """Test user ID auto-discovery with invalid response format."""
+        # Mock response without userID field
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "key": "test_api_key",
+            # Missing userID field
+            "username": "testuser"
+        }
+        mock_get.return_value = mock_response
+
+        # Create config without user ID
+        config = ZoteroConfig(api_key="test_api_key", library_type="user")
+        
+        # Should raise error with helpful message
+        with pytest.raises(ValueError, match="Invalid response from Zotero API"):
+            ZoteroSource(config)
 
     @patch("puby.sources.zotero.Zotero")
     def test_fetch_publications_success(self, mock_zotero):

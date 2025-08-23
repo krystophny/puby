@@ -196,10 +196,11 @@ class TestZoteroConfig:
 
     def test_zotero_config_validation_user_type_missing_user_id(self):
         """Test user library type validation without user ID."""
+        # User ID is now optional for user libraries (will be auto-discovered from API key)
         config = ZoteroConfig(api_key="valid_key", library_type="user")
-        assert not config.is_valid()
+        assert config.is_valid()  # Now valid since we auto-discover user ID
         errors = config.validation_errors()
-        assert any("User ID is required for user library type" in error for error in errors)
+        assert len(errors) == 0  # No validation errors expected
 
     def test_zotero_config_validation_group_type_missing_group_id(self):
         """Test group library type validation without group ID."""
