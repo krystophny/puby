@@ -20,7 +20,7 @@ class PureSource(PublicationSource):
     def __init__(self, pure_url: str):
         """Initialize Pure source with validation."""
         self.url = pure_url.strip()
-        self.logger = self._get_logger()
+        self.logger = logging.getLogger(__name__)
 
         # Validate URL format
         if not self.url.startswith(("http://", "https://")):

@@ -19,7 +19,7 @@ class ScholarSource(PublicationSource):
     def __init__(self, scholar_url: str):
         """Initialize Scholar source."""
         self.url = scholar_url.strip()
-        self.logger = self._get_logger()
+        self.logger = logging.getLogger(__name__)
         self.user_id = self._extract_scholar_id(self.url)
         self.logger.info(f"Initialized Scholar source for user {self.user_id}")
 
