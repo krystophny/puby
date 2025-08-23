@@ -9,7 +9,7 @@
 - [ ] #10: feat: add Pure research portal support
 
 ## DOING (Current Work)
-- [x] #4: feat: implement ORCID API parser (branch: feat-orcid-api-parser-4)
 
 ## DONE (Completed)
+- [x] #4: feat: implement ORCID API parser (PR #14)
 - [x] #3: feat: implement core publication data types
