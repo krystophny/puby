@@ -4,9 +4,9 @@
 - [ ] #10: feat: add Pure research portal support
 
 ## DOING (Current Work)
-- [x] #9: feat: add Google Scholar profile parsing support (branch: feat-google-scholar-9)
 
 ## DONE (Completed)
+- [x] #9: feat: add Google Scholar profile parsing support (PR #19)
 - [x] #8: feat: integrate CLI with all components for MVP workflow (PR #18)
 - [x] #7: feat: implement report generation and output formatting (PR #17)
 - [x] #6: feat: implement publication matching and comparison (PR #16)
