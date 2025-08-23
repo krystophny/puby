@@ -4,9 +4,9 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
-- [ ] #25: refactor: sources.py exceeds size limit
 
 ## DONE (Completed)
+- [x] #25: refactor: sources.py exceeds size limit (PR #49)
 - [x] #23: fix: test suite regression - message mismatch (PR #48)
 - [x] #21: fix: inconsistent error handling between fetch and check commands (PR #47)
 - [x] #33: feat: add BibTeX export for missing publications (PR #46)
