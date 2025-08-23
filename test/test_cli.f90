@@ -1,7 +1,8 @@
 program test_cli
     ! CLI argument parsing test suite
     ! Tests for puby CLI functionality per Issue #1
-    use puby_cli, only: cli_config_t, parse_arguments_from_array, validate_url, display_help
+    use puby_cli, only: cli_config_t, parse_arguments_from_array, validate_url, &
+                        validate_url_by_type, display_help
     implicit none
     
     integer :: test_count = 0
@@ -97,7 +98,7 @@ contains
         ! Test all long-form arguments
         args(1) = 'check'
         args(2) = '--scholar=https://scholar.google.com/test'
-        args(3) = '--orcid=https://orcid.org/test'
+        args(3) = '--orcid=https://orcid.org/0000-0000-0000-0001'
         args(4) = '--pure=https://pure.example.com/test'
         args(5) = '--zotero=54321'
         args(6) = '--api-key=secret123'
@@ -136,15 +137,15 @@ contains
         
         ! Test order 1: scholar, orcid, zotero
         args1(1) = 'check'
-        args1(2) = '--scholar=https://scholar.test.com'
-        args1(3) = '--orcid=https://orcid.test.com'
+        args1(2) = '--scholar=https://scholar.google.com/citations?user=test'
+        args1(3) = '--orcid=https://orcid.org/0000-0000-0000-0001'
         args1(4) = '--zotero=123'
         
         ! Test order 2: zotero, orcid, scholar
         args2(1) = 'check'
         args2(2) = '--zotero=123'
-        args2(3) = '--orcid=https://orcid.test.com'
-        args2(4) = '--scholar=https://scholar.test.com'
+        args2(3) = '--orcid=https://orcid.org/0000-0000-0000-0001'
+        args2(4) = '--scholar=https://scholar.google.com/citations?user=test'
         
         call parse_arguments_from_array(args1, config1)
         call parse_arguments_from_array(args2, config2)
@@ -199,6 +200,7 @@ contains
         call test_invalid_url_formats()
         call test_malformed_urls()
         call test_empty_urls()
+        call test_domain_specific_validation()
     end subroutine
     
     subroutine test_valid_http_urls()
@@ -329,6 +331,121 @@ contains
         end if
         
         write(*,'(A)') '  PASS: Empty URLs correctly rejected'
+    end subroutine
+    
+    subroutine test_domain_specific_validation()
+        ! Test suite for domain-specific URL validation
+        write(*,'(A)') 'Testing domain-specific URL validation...'
+        
+        call test_scholar_domain_validation()
+        call test_orcid_domain_validation()
+        call test_pure_domain_validation()
+    end subroutine
+    
+    subroutine test_scholar_domain_validation()
+        ! Given: Scholar URLs that should require scholar.google.com domain
+        ! When: validate_url_by_type is called with 'scholar' type
+        ! Then: Should only accept URLs containing scholar.google.com
+        
+        write(*,'(A)') 'Testing Scholar domain validation...'
+        call increment_test_count()
+        
+        ! Valid Scholar URLs
+        if (.not. validate_url_by_type('https://scholar.google.com/citations?user=abc123', 'scholar')) then
+            call record_test_failure('Valid Scholar URL rejected')
+            return
+        end if
+        
+        if (.not. validate_url_by_type('http://scholar.google.com/citations', 'scholar')) then
+            call record_test_failure('Valid Scholar HTTP URL rejected')
+            return
+        end if
+        
+        ! Invalid Scholar URLs (wrong domain)
+        if (validate_url_by_type('https://example.com/scholar', 'scholar')) then
+            call record_test_failure('Non-Scholar domain incorrectly accepted')
+            return
+        end if
+        
+        if (validate_url_by_type('https://google.com/citations', 'scholar')) then
+            call record_test_failure('Wrong Google domain incorrectly accepted')
+            return
+        end if
+        
+        write(*,'(A)') '  PASS: Scholar domain validation working'
+    end subroutine
+    
+    subroutine test_orcid_domain_validation()
+        ! Given: ORCID URLs that should follow specific pattern
+        ! When: validate_url_by_type is called with 'orcid' type
+        ! Then: Should only accept HTTPS orcid.org/0000-XXXX-XXXX-XXXX format
+        
+        write(*,'(A)') 'Testing ORCID domain validation...'
+        call increment_test_count()
+        
+        ! Valid ORCID URLs
+        if (.not. validate_url_by_type('https://orcid.org/0000-0000-0000-0001', 'orcid')) then
+            call record_test_failure('Valid ORCID URL rejected')
+            return
+        end if
+        
+        if (.not. validate_url_by_type('https://orcid.org/0000-1234-5678-9012', 'orcid')) then
+            call record_test_failure('Valid ORCID URL with different numbers rejected')
+            return
+        end if
+        
+        ! Invalid ORCID URLs (HTTP not allowed)
+        if (validate_url_by_type('http://orcid.org/0000-1234-5678-9012', 'orcid')) then
+            call record_test_failure('HTTP ORCID URL incorrectly accepted')
+            return
+        end if
+        
+        ! Invalid ORCID URLs (wrong domain)
+        if (validate_url_by_type('https://example.com/0000-1234-5678-9012', 'orcid')) then
+            call record_test_failure('Non-ORCID domain incorrectly accepted')
+            return
+        end if
+        
+        ! Invalid ORCID URLs (missing pattern)
+        if (validate_url_by_type('https://orcid.org/profile', 'orcid')) then
+            call record_test_failure('ORCID URL without proper pattern incorrectly accepted')
+            return
+        end if
+        
+        write(*,'(A)') '  PASS: ORCID domain validation working'
+    end subroutine
+    
+    subroutine test_pure_domain_validation()
+        ! Given: Pure URLs that should be HTTPS only
+        ! When: validate_url_by_type is called with 'pure' type
+        ! Then: Should only accept HTTPS URLs
+        
+        write(*,'(A)') 'Testing Pure domain validation...'
+        call increment_test_count()
+        
+        ! Valid Pure URLs (HTTPS)
+        if (.not. validate_url_by_type('https://pure.example.com/portal/person', 'pure')) then
+            call record_test_failure('Valid Pure HTTPS URL rejected')
+            return
+        end if
+        
+        if (.not. validate_url_by_type('https://research.university.edu/pure/profile', 'pure')) then
+            call record_test_failure('Valid Pure university URL rejected')
+            return
+        end if
+        
+        ! Invalid Pure URLs (HTTP not allowed)
+        if (validate_url_by_type('http://pure.example.com/portal', 'pure')) then
+            call record_test_failure('HTTP Pure URL incorrectly accepted')
+            return
+        end if
+        
+        if (validate_url_by_type('http://research.university.edu/profile', 'pure')) then
+            call record_test_failure('HTTP university Pure URL incorrectly accepted')
+            return
+        end if
+        
+        write(*,'(A)') '  PASS: Pure domain validation working'
     end subroutine
 
     subroutine test_help_system()
@@ -559,7 +676,7 @@ contains
         ! Test valid Zotero configuration
         args(1) = 'check'
         args(2) = '--zotero=12345'
-        args(3) = '--orcid=https://orcid.org/test'
+        args(3) = '--orcid=https://orcid.org/0000-0000-0000-0001'
         
         call parse_arguments_from_array(args, config)
         
@@ -620,7 +737,7 @@ contains
         ! Test complete valid configuration
         args(1) = 'check'
         args(2) = '--scholar=https://scholar.google.com/test'
-        args(3) = '--orcid=https://orcid.org/test'
+        args(3) = '--orcid=https://orcid.org/0000-0000-0000-0001'
         args(4) = '--zotero=12345'
         args(5) = '--api-key=secret'
         

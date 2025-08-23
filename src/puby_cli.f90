@@ -7,6 +7,7 @@ module puby_cli
     public :: parse_arguments_from_array
     public :: display_help
     public :: validate_url
+    public :: validate_url_by_type
 
     ! CLI configuration type
     type :: cli_config_t
@@ -94,7 +95,7 @@ contains
                 
                 select case (key)
                 case ('scholar', 'orcid', 'pure')
-                    if (.not. validate_url(value)) then
+                    if (.not. validate_url_by_type(value, key)) then
                         select case (key)
                         case ('scholar')
                             config%error_message = 'Invalid Scholar URL: ' // value
@@ -186,10 +187,9 @@ contains
         ! Extract value
         value = arg(equals_pos+1:len_trim(arg))
         
-        ! Validate non-empty
+        ! Validate non-empty - deallocate if invalid
         if (len(key) == 0 .or. len(value) == 0) then
-            if (allocated(key)) deallocate(key)
-            if (allocated(value)) deallocate(value)
+            deallocate(key, value)
         end if
     end subroutine parse_key_value_argument
 
@@ -234,6 +234,61 @@ contains
         ! If we get here, no valid protocol was found
         validate_url = .false.
     end function validate_url
+
+    logical function validate_url_by_type(url_string, url_type)
+        character(len=*), intent(in) :: url_string, url_type
+        character(len=:), allocatable :: trimmed_url
+        integer :: len_url, orcid_pattern_pos
+        
+        validate_url_by_type = .false.
+        
+        ! First check basic URL format
+        if (.not. validate_url(url_string)) then
+            return
+        end if
+        
+        trimmed_url = trim(adjustl(url_string))
+        len_url = len(trimmed_url)
+        
+        select case (url_type)
+        case ('scholar')
+            ! Must contain scholar.google.com domain
+            if (index(trimmed_url, 'scholar.google.com') == 0) then
+                return
+            end if
+            validate_url_by_type = .true.
+            
+        case ('orcid')
+            ! Must follow https://orcid.org/0000-XXXX-XXXX-XXXX pattern
+            if (len_url < 8 .or. trimmed_url(1:8) /= 'https://') then
+                return ! ORCID must be HTTPS
+            end if
+            
+            if (index(trimmed_url, 'orcid.org/0000-') == 0) then
+                return
+            end if
+            
+            ! Find position of orcid pattern and validate format
+            orcid_pattern_pos = index(trimmed_url, 'orcid.org/0000-')
+            if (orcid_pattern_pos > 0) then
+                ! Check if we have the full ORCID pattern: 0000-XXXX-XXXX-XXXX
+                if (len_url >= orcid_pattern_pos + 23) then ! 'orcid.org/0000-' + 'XXXX-XXXX-XXXX' = 9 + 14 = 23
+                    validate_url_by_type = .true.
+                end if
+            end if
+            
+        case ('pure')
+            ! Must be HTTPS only (no HTTP allowed for Pure)
+            if (len_url < 8 .or. trimmed_url(1:8) /= 'https://') then
+                return
+            end if
+            validate_url_by_type = .true.
+            
+        case default
+            ! For unknown types, use basic validation
+            validate_url_by_type = .true.
+        end select
+    end function validate_url_by_type
 
     subroutine display_help()
         write(*,'(A)') 'Puby - Publication List Management Tool'
