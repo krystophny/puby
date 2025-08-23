@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #34: bug: be honest about missing API keys - never fake functionality
 - [ ] #30: feat: add .env file support for API keys
 - [ ] #28: feat: add Zotero user ID auto-discovery from API key
 - [ ] #22: fix: Zotero connection validation missing
@@ -17,6 +16,7 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
+- [ ] #34: bug: be honest about missing API keys - never fake functionality
 
 ## DONE (Completed)
 - [x] #10: feat: add Pure research portal support (PR #20 merged)
