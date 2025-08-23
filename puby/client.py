@@ -25,7 +25,7 @@ class PublicationClient:
 
     def fetch_publications(self, source: PublicationSource) -> List[Publication]:
         """Fetch publications from a given source.
-        
+
         Raises:
             ValueError: If authentication fails or API key is invalid
             Exception: For other errors during fetching
@@ -38,7 +38,7 @@ class PublicationClient:
             )
             return publications
         except ValueError as e:
-            # Re-raise ValueError (which includes authentication errors) 
+            # Re-raise ValueError (which includes authentication errors)
             # so they can be handled properly by the CLI
             self.logger.error(f"Error fetching publications: {e}")
             raise

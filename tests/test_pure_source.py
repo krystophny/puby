@@ -2,9 +2,7 @@
 
 import pytest
 import responses
-from bs4 import BeautifulSoup
 
-from puby.models import Author, Publication
 from puby.sources import PureSource
 
 
@@ -29,7 +27,7 @@ class TestPureSource:
     def test_fetch_publications_success(self):
         """Test successful publication fetching from Pure portal."""
         url = "https://research.example.edu/en/persons/john-doe"
-        
+
         # Mock HTML response with Pure portal structure
         html_content = """
         <html>
@@ -51,7 +49,7 @@ class TestPureSource:
                                 <a href="/publication/1234">Test Publication Title</a>
                             </h3>
                             <div class="persons">
-                                <span class="name">John Doe</span>, 
+                                <span class="name">John Doe</span>,
                                 <span class="name">Jane Smith</span>
                             </div>
                             <div class="rendering_publicationdetails">
@@ -79,20 +77,16 @@ class TestPureSource:
             </body>
         </html>
         """
-        
+
         responses.add(
-            responses.GET,
-            url,
-            body=html_content,
-            status=200,
-            content_type="text/html"
+            responses.GET, url, body=html_content, status=200, content_type="text/html"
         )
-        
+
         source = PureSource(url)
         publications = source.fetch()
-        
+
         assert len(publications) == 2
-        
+
         # Check first publication
         pub1 = publications[0]
         assert pub1.title == "Test Publication Title"
@@ -102,7 +96,7 @@ class TestPureSource:
         assert pub1.journal == "Test Journal"
         assert pub1.year == 2023
         assert pub1.source == "Pure"
-        
+
         # Check second publication
         pub2 = publications[1]
         assert pub2.title == "Another Research Article"
@@ -116,7 +110,7 @@ class TestPureSource:
     def test_fetch_publications_with_pagination(self):
         """Test publication fetching with pagination."""
         base_url = "https://research.example.edu/en/persons/john-doe"
-        
+
         # First page with "Load more" link
         page1_html = """
         <html>
@@ -142,7 +136,7 @@ class TestPureSource:
             </body>
         </html>
         """
-        
+
         # Second page without "Load more"
         page2_html = """
         <html>
@@ -165,13 +159,13 @@ class TestPureSource:
             </body>
         </html>
         """
-        
+
         responses.add(responses.GET, base_url, body=page1_html, status=200)
         responses.add(responses.GET, f"{base_url}?page=2", body=page2_html, status=200)
-        
+
         source = PureSource(base_url)
         publications = source.fetch()
-        
+
         assert len(publications) == 2
         assert publications[0].title == "Publication 1"
         assert publications[1].title == "Publication 2"
@@ -180,24 +174,19 @@ class TestPureSource:
     def test_fetch_publications_request_error(self):
         """Test handling of request errors."""
         url = "https://research.example.edu/en/persons/john-doe"
-        
-        responses.add(
-            responses.GET,
-            url,
-            body="Not Found",
-            status=404
-        )
-        
+
+        responses.add(responses.GET, url, body="Not Found", status=404)
+
         source = PureSource(url)
         publications = source.fetch()
-        
+
         assert publications == []
 
     @responses.activate
     def test_fetch_empty_page(self):
         """Test handling of empty publication page."""
         url = "https://research.example.edu/en/persons/john-doe"
-        
+
         html_content = """
         <html>
             <body>
@@ -209,19 +198,19 @@ class TestPureSource:
             </body>
         </html>
         """
-        
+
         responses.add(responses.GET, url, body=html_content, status=200)
-        
+
         source = PureSource(url)
         publications = source.fetch()
-        
+
         assert publications == []
 
     @responses.activate
     def test_fetch_with_json_ld_metadata(self):
         """Test extraction of metadata from JSON-LD structured data."""
         url = "https://research.example.edu/en/persons/john-doe"
-        
+
         html_content = """
         <html>
             <head>
@@ -256,12 +245,12 @@ class TestPureSource:
             </body>
         </html>
         """
-        
+
         responses.add(responses.GET, url, body=html_content, status=200)
-        
+
         source = PureSource(url)
         publications = source.fetch()
-        
+
         assert len(publications) == 1
         pub = publications[0]
         assert pub.title == "JSON-LD Publication"
@@ -272,8 +261,10 @@ class TestPureSource:
         source = PureSource("https://research.example.edu/en/persons/john-doe")
         person_id = source._extract_person_id()
         assert person_id == "john-doe"
-        
-        source = PureSource("https://pure.au.dk/en/persons/kristian-steenstrup-sørensen")
+
+        source = PureSource(
+            "https://pure.au.dk/en/persons/kristian-steenstrup-sørensen"
+        )
         person_id = source._extract_person_id()
         assert person_id == "kristian-steenstrup-sørensen"
 
@@ -281,18 +272,22 @@ class TestPureSource:
         """Test API URL construction when available."""
         source = PureSource("https://research.example.edu/en/persons/john-doe")
         api_url = source._build_api_url()
-        expected = "https://research.example.edu/ws/api/persons/john-doe/research-outputs"
+        expected = (
+            "https://research.example.edu/ws/api/persons/john-doe/research-outputs"
+        )
         assert api_url == expected
 
     @responses.activate
     def test_fetch_with_api_fallback(self):
         """Test fallback from API to HTML scraping."""
         url = "https://research.example.edu/en/persons/john-doe"
-        api_url = "https://research.example.edu/ws/api/persons/john-doe/research-outputs"
-        
+        api_url = (
+            "https://research.example.edu/ws/api/persons/john-doe/research-outputs"
+        )
+
         # API returns 404, should fallback to HTML
         responses.add(responses.GET, api_url, status=404)
-        
+
         html_content = """
         <html>
             <body>
@@ -314,20 +309,20 @@ class TestPureSource:
             </body>
         </html>
         """
-        
+
         responses.add(responses.GET, url, body=html_content, status=200)
-        
+
         source = PureSource(url)
         publications = source.fetch()
-        
+
         assert len(publications) == 1
         assert publications[0].title == "Fallback Publication"
 
-    @responses.activate  
+    @responses.activate
     def test_rate_limiting(self):
         """Test that rate limiting is applied between requests."""
         base_url = "https://research.example.edu/en/persons/john-doe"
-        
+
         # Set up pagination to force multiple requests
         page1_html = """<html><body><div class="rendering rendering_person">
                         <div class="result-container"></div>
@@ -335,18 +330,19 @@ class TestPureSource:
                         </div></body></html>"""
         page2_html = """<html><body><div class="rendering rendering_person">
                         <div class="result-container"></div></div></body></html>"""
-        
+
         responses.add(responses.GET, base_url, body=page1_html, status=200)
         responses.add(responses.GET, f"{base_url}?page=2", body=page2_html, status=200)
-        
+
         import time
+
         start_time = time.time()
-        
+
         source = PureSource(base_url)
-        publications = source.fetch()
-        
+        source.fetch()
+
         end_time = time.time()
         elapsed = end_time - start_time
-        
+
         # Should have at least minimal delay between requests
         assert elapsed >= 1.0  # At least 1 second for rate limiting
