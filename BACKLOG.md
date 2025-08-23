@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #31: feat: add standardized citation key generation
 - [ ] #32: feat: add fuzzy title matching with configurable threshold
 - [ ] #33: feat: add BibTeX export for missing publications
 - [ ] #21: fix: inconsistent error handling between fetch and check commands
@@ -10,6 +9,7 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
+- [x] #31: feat: add standardized citation key generation (branch: feat-31-standardized-citation-key-generation)
 
 ## DONE (Completed)
 - [x] #42: fix: test suite failures after PR #41 source refactoring (PR #43)
