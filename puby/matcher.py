@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Set, Tuple
+from typing import List
 
 from .models import Author, Publication
 
@@ -47,7 +47,7 @@ class PublicationMatcher:
         potential_threshold: float = 0.5,
     ):
         """Initialize the matcher with configuration.
-        
+
         Args:
             similarity_threshold: Minimum confidence for exact matches
             year_tolerance: Maximum year difference for matches
@@ -240,7 +240,7 @@ class PublicationMatcher:
 
         # Penalty for different lengths (more strict)
         len_ratio = min(len(words1), len(words2)) / max(len(words1), len(words2))
-        
+
         return jaccard * len_ratio
 
     def _calculate_author_similarity(self, authors1: List[Author], authors2: List[Author]) -> float:
