@@ -8,9 +8,9 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
-- [x] #32: feat: add fuzzy title matching with configurable threshold (branch: feat-32-fuzzy-title-matching)
 
 ## DONE (Completed)
+- [x] #32: feat: add fuzzy title matching with configurable threshold (PR #45)
 - [x] #31: feat: add standardized citation key generation (PR #44)
 - [x] #42: fix: test suite failures after PR #41 source refactoring (PR #43)
 - [x] #29: feat: add Zotero My Publications endpoint support (PR #41)
