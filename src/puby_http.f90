@@ -382,7 +382,10 @@ contains
         
         if (.not. headers%initialized) return
         
-        ! Create header line
+        ! Create header line with overflow protection
+        if (len_trim(name) + len_trim(value) + 2 > 256) then
+            return  ! Silently skip oversized headers
+        end if
         write(header_line, '(A,A,A)') trim(name), ': ', trim(value)
         
         ! Expand array
@@ -482,11 +485,11 @@ contains
         type(http_headers_t), intent(in) :: headers
         type(curl_error_t), intent(out) :: error
         
-        ! Simplified header setting - for full implementation would need curl_slist
-        ! For now, just mark as successful
-        error%code = CURLE_OK
-        error%success = .true.
-        error%message = "custom headers handling simplified"
+        ! Headers functionality requires libcurl slist implementation
+        ! Mark as not implemented rather than silently succeeding
+        error%code = CURLE_UNSUPPORTED_PROTOCOL
+        error%success = .false.
+        error%message = "custom headers not yet implemented - requires curl_slist"
     end subroutine
 
     subroutine set_content_type(client, content_type, error)
@@ -494,10 +497,11 @@ contains
         character(len=*), intent(in) :: content_type
         type(curl_error_t), intent(out) :: error
         
-        ! For now, simplified content type handling
-        error%code = CURLE_OK
-        error%success = .true.
-        error%message = "content type handling simplified"
+        ! Content-Type requires HTTP header setting implementation
+        ! Mark as not implemented rather than silently succeeding
+        error%code = CURLE_UNSUPPORTED_PROTOCOL
+        error%success = .false.
+        error%message = "content-type setting not yet implemented - requires headers"
     end subroutine
 
 end module puby_http
