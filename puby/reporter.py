@@ -222,22 +222,36 @@ class AnalysisReporter:
             List of sync recommendations
         """
         recommendations = []
+        
+        # Add recommendations from different analysis types
+        recommendations.extend(self._generate_missing_recommendations(result.missing_publications))
+        recommendations.extend(self._generate_duplicate_recommendations(result.duplicate_groups))
+        recommendations.extend(self._generate_potential_match_recommendations(result.potential_matches))
+        
+        return recommendations
 
-        # Recommend adding missing publications
-        for pub in result.missing_publications:
-            recommendations.append(
-                SyncRecommendation(
-                    action_type="add",
-                    publication=pub,
-                    reason="Missing in reference library",
-                    confidence=0.95,
-                )
+    def _generate_missing_recommendations(
+        self, missing_publications: List[Publication]
+    ) -> List[SyncRecommendation]:
+        """Generate recommendations for missing publications."""
+        return [
+            SyncRecommendation(
+                action_type="add",
+                publication=pub,
+                reason="Missing in reference library",
+                confidence=0.95,
             )
+            for pub in missing_publications
+        ]
 
-        # Recommend merging or removing duplicates
-        for group in result.duplicate_groups:
+    def _generate_duplicate_recommendations(
+        self, duplicate_groups: List[List[Publication]]
+    ) -> List[SyncRecommendation]:
+        """Generate recommendations for duplicate publications."""
+        recommendations = []
+        
+        for group in duplicate_groups:
             if len(group) > 1:
-                # Keep the most complete publication, remove others
                 primary = self._select_primary_publication(group)
                 for pub in group:
                     if pub != primary:
@@ -249,19 +263,22 @@ class AnalysisReporter:
                                 confidence=0.85,
                             )
                         )
-
-        # Recommend reviewing potential matches
-        for match in result.potential_matches[:5]:  # Limit to top 5
-            recommendations.append(
-                SyncRecommendation(
-                    action_type="review",
-                    publication=match.source_publication,
-                    reason=f"Potential match with {match.confidence:.0%} confidence",
-                    confidence=match.confidence,
-                )
-            )
-
+        
         return recommendations
+
+    def _generate_potential_match_recommendations(
+        self, potential_matches: List[PotentialMatch]
+    ) -> List[SyncRecommendation]:
+        """Generate recommendations for potential matches."""
+        return [
+            SyncRecommendation(
+                action_type="review",
+                publication=match.source_publication,
+                reason=f"Potential match with {match.confidence:.0%} confidence",
+                confidence=match.confidence,
+            )
+            for match in potential_matches[:5]  # Limit to top 5
+        ]
 
     def print_sync_recommendations(
         self, recommendations: List[SyncRecommendation]

@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from .models import Author, Publication
 
@@ -56,10 +56,25 @@ class PublicationMatcher:
 
     def match_publications(self, pub1: Publication, pub2: Publication) -> MatchResult:
         """Match two publications and return detailed result."""
-        confidence = 0.0
-        reasons = []
+        # Check for definitive DOI match first
+        doi_result = self._check_doi_match(pub1, pub2)
+        if doi_result:
+            return doi_result
 
-        # DOI matching is definitive
+        # Calculate similarity based on multiple factors
+        confidence, reasons = self._calculate_similarity(pub1, pub2)
+        is_match = confidence >= self.similarity_threshold
+
+        return MatchResult(
+            source_publication=pub1,
+            reference_publication=pub2,
+            confidence=min(confidence, 1.0),
+            is_match=is_match,
+            match_reasons=reasons,
+        )
+
+    def _check_doi_match(self, pub1: Publication, pub2: Publication) -> Optional[MatchResult]:
+        """Check for definitive DOI match between publications."""
         if pub1.doi and pub2.doi:
             if self._normalize_doi(pub1.doi) == self._normalize_doi(pub2.doi):
                 return MatchResult(
@@ -78,6 +93,12 @@ class PublicationMatcher:
                     is_match=False,
                     match_reasons=[],
                 )
+        return None
+
+    def _calculate_similarity(self, pub1: Publication, pub2: Publication) -> tuple[float, List[str]]:
+        """Calculate similarity score and reasons between two publications."""
+        confidence = 0.0
+        reasons = []
 
         # Title similarity (weighted heavily)
         if pub1.title and pub2.title:
@@ -110,15 +131,7 @@ class PublicationMatcher:
             confidence += 0.1
             reasons.append("journal")
 
-        is_match = confidence >= self.similarity_threshold
-
-        return MatchResult(
-            source_publication=pub1,
-            reference_publication=pub2,
-            confidence=min(confidence, 1.0),
-            is_match=is_match,
-            match_reasons=reasons,
-        )
+        return confidence, reasons
 
     def find_missing(
         self, source_pubs: List[Publication], reference_pubs: List[Publication]
