@@ -36,9 +36,52 @@ puby CLI
 
 ### Technical Architecture
 
+#### libcurl Integration Strategy
+
+Based on patterns from the fortran-curl project, puby will use direct libcurl integration:
+
+**ISO C Binding Approach**:
+- Use `iso_c_binding` module for direct C library interfacing
+- Create thin Fortran wrappers around essential libcurl functions:
+  - `curl_easy_init()` - Initialize curl handle
+  - `curl_easy_setopt()` - Configure request options
+  - `curl_easy_perform()` - Execute HTTP request
+  - `curl_easy_cleanup()` - Clean up resources
+- Handle C string conversion and memory management carefully
+
+**Key libcurl Functions Required**:
+```fortran
+! Core curl interface bindings
+interface
+    function curl_easy_init() bind(c, name='curl_easy_init')
+        import :: c_ptr
+        type(c_ptr) :: curl_easy_init
+    end function
+    
+    function curl_easy_setopt(curl, option, parameter) bind(c, name='curl_easy_setopt')
+        import :: c_ptr, c_int, c_long
+        type(c_ptr), value :: curl
+        integer(c_int), value :: option
+        type(*), intent(in) :: parameter
+        integer(c_int) :: curl_easy_setopt
+    end function
+    
+    function curl_easy_perform(curl) bind(c, name='curl_easy_perform')
+        import :: c_ptr, c_int
+        type(c_ptr), value :: curl
+        integer(c_int) :: curl_easy_perform
+    end function
+end interface
+```
+
+**Memory Management**:
+- Use Fortran allocatable strings for HTTP response data
+- Implement C callback functions to capture response body and headers
+- Ensure proper cleanup of curl handles and allocated memory
+
 #### Language: Modern Fortran (2018+)
 - **Rationale**: Existing fpm project, excellent for data processing
-- **HTTP Client**: Use system calls to curl/wget for MVP
+- **HTTP Client**: Direct libcurl integration via ISO C bindings
 - **JSON Parsing**: Custom lightweight parser for API responses
 - **String Processing**: Native Fortran string handling
 
@@ -46,8 +89,17 @@ puby CLI
 ```fortran
 src/
 ├── puby.f90                    ! Main module with public API
-├── puby_types.f90             ! Type definitions
-├── puby_http.f90              ! HTTP client wrapper
+├── puby_types.f90             ! Type definitions  
+├── puby_curl.f90              ! libcurl ISO C bindings wrapper
+│   ├── Core libcurl interfaces (init, setopt, perform, cleanup)
+│   ├── C callback functions for response capture
+│   ├── C string conversion utilities  
+│   └── Memory management for C/Fortran boundary
+├── puby_http.f90              ! High-level HTTP client interface
+│   ├── Simplified GET/POST wrappers
+│   ├── Response parsing and error handling
+│   ├── Configuration management (timeouts, SSL, headers)
+│   └── Fortran-native interface over libcurl bindings
 ├── puby_parsers.f90           ! URL/content parsers
 ├── puby_zotero.f90            ! Zotero API integration
 ├── puby_analysis.f90          ! Publication analysis
@@ -71,13 +123,27 @@ type :: zotero_config_t
     character(len=:), allocatable :: group_id
     character(len=:), allocatable :: library_type
 end type
+
+type :: http_response_t
+    integer :: status_code
+    character(len=:), allocatable :: body
+    character(len=:), allocatable :: headers
+    logical :: success
+end type
+
+type :: curl_config_t
+    character(len=:), allocatable :: user_agent
+    integer :: timeout_seconds
+    logical :: follow_redirects
+    logical :: verify_ssl
+end type
 ```
 
 ### MVP Workflow
 
 #### Phase 1: Basic CLI Framework
 - Argument parsing for URLs and Zotero config
-- Basic HTTP wrapper around system curl
+- libcurl ISO C bindings setup with basic wrapper
 - Simple text output
 
 #### Phase 2: Data Extraction
@@ -99,7 +165,7 @@ end type
 ### Integration Points
 
 #### External Dependencies
-- **curl/wget**: HTTP requests (system calls)
+- **libcurl**: Direct HTTP client library integration
 - **Claude CLI**: Future AI-assisted text processing
 - **Zotero API**: Publication validation and sync
 
@@ -136,7 +202,8 @@ end type
 
 #### Technical Risks
 - **Web scraping fragility**: Start with stable APIs (ORCID), add scraping incrementally
-- **HTTP complexity in Fortran**: Use system calls to mature tools (curl)
+- **libcurl ISO C binding complexity**: Use proven patterns from fortran-curl project
+- **Memory management in C interop**: Careful handling of allocatable strings and cleanup
 - **JSON parsing**: Implement minimal parser for needed fields only
 
 #### Scope Risks
@@ -147,12 +214,13 @@ end type
 ### Development Priority
 
 1. **Core CLI framework** (args, config, basic flow)
-2. **HTTP client wrapper** (curl system calls)
-3. **Single URL source parser** (ORCID API - most structured)
-4. **Basic Zotero integration** (retrieve publications)
-5. **Simple analysis** (exact title/DOI matching)
-6. **Text report generation**
-7. **Additional source support** (Scholar, Pure)
+2. **libcurl ISO C bindings** (direct library integration)
+3. **HTTP client wrapper** (high-level interface over libcurl)
+4. **Single URL source parser** (ORCID API - most structured)
+5. **Basic Zotero integration** (retrieve publications)
+6. **Simple analysis** (exact title/DOI matching)
+7. **Text report generation**
+8. **Additional source support** (Scholar, Pure)
 
 ### Future Enhancements (Post-MVP)
 - Fuzzy publication matching using Claude CLI

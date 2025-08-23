@@ -4,14 +4,18 @@ license = "license"
 author = "Christopher Albert"
 maintainer = "albert@tugraz.at"
 copyright = "Copyright 2025, Christopher Albert"
+
 [build]
 auto-executables = true
 auto-tests = true
 auto-examples = true
 module-naming = false
+link = ["curl"]
+
 [install]
 library = false
 test = false
+
 [fortran]
 implicit-typing = false
 implicit-external = false
