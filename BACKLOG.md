@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #22: fix: Zotero connection validation missing
 - [ ] #24: fix: no API key validation
 - [ ] #26: fix: ZoteroSource class not integrated into CLI
 - [ ] #29: feat: add Zotero My Publications endpoint support
@@ -14,6 +13,7 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
+- [ ] #22: fix: Zotero connection validation missing (branch: fix-22-zotero-connection-validation)
 
 ## DONE (Completed)
 - [x] #28: feat: add Zotero user ID auto-discovery from API key (PR #37)
