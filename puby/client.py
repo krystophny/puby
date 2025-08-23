@@ -24,7 +24,12 @@ class PublicationClient:
         self.logger = logging.getLogger(__name__)
 
     def fetch_publications(self, source: PublicationSource) -> List[Publication]:
-        """Fetch publications from a given source."""
+        """Fetch publications from a given source.
+        
+        Raises:
+            ValueError: If authentication fails or API key is invalid
+            Exception: For other errors during fetching
+        """
         try:
             self.logger.debug(f"Fetching publications from {source.__class__.__name__}")
             publications = source.fetch()
@@ -32,6 +37,12 @@ class PublicationClient:
                 f"Fetched {len(publications)} publications from {source.__class__.__name__}"
             )
             return publications
-        except Exception as e:
+        except ValueError as e:
+            # Re-raise ValueError (which includes authentication errors) 
+            # so they can be handled properly by the CLI
             self.logger.error(f"Error fetching publications: {e}")
-            return []
+            raise
+        except Exception as e:
+            # For non-authentication errors, log but still raise to avoid silent failures
+            self.logger.error(f"Unexpected error fetching publications: {e}")
+            raise

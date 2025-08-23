@@ -190,7 +190,10 @@ class ZoteroConfig:
         errors = []
 
         if not self.api_key or not self.api_key.strip():
-            errors.append("API key is required")
+            errors.append(
+                "API key is required for Zotero access. "
+                "Get your API key at: https://www.zotero.org/settings/keys"
+            )
 
         if self.library_type not in ("user", "group"):
             errors.append("Library type must be 'user' or 'group'")
@@ -199,7 +202,10 @@ class ZoteroConfig:
             errors.append("Group ID is required for group library type")
 
         if self.library_type == "user" and not self.group_id:
-            errors.append("User ID is required for user library type")
+            errors.append(
+                "User ID is required for user library type. "
+                "Find your user ID at: https://www.zotero.org/settings/keys"
+            )
 
         return errors
 

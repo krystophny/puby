@@ -338,4 +338,5 @@ class TestCLI:
 
         assert result.exit_code == 0
         assert "Found 1 publications" in result.output
-        assert "Saving to test.bib" in result.output
+        assert "Successfully saved" in result.output
+        assert "test.bib" in result.output

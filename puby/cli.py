@@ -94,10 +94,21 @@ def _fetch_zotero_publications(
     """Fetch publications from Zotero library."""
     if verbose:
         click.echo("  Fetching from Zotero library...")
-    zotero_pubs = client.fetch_publications(zotero_lib)
-    if verbose:
-        click.echo(f"    Found {len(zotero_pubs)} publications")
-    return zotero_pubs
+    try:
+        zotero_pubs = client.fetch_publications(zotero_lib)
+        if verbose:
+            click.echo(f"    Found {len(zotero_pubs)} publications")
+        return zotero_pubs
+    except ValueError as e:
+        # Propagate authentication errors with clear messages
+        error_msg = str(e)
+        if "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+            click.echo(f"Error: {e}", err=True)
+            click.echo("\nTo fix this issue:", err=True)
+            click.echo("1. Get your Zotero API key from: https://www.zotero.org/settings/keys", err=True)
+            click.echo("2. Run the command again with --api-key YOUR_KEY", err=True)
+            sys.exit(1)
+        raise
 
 
 def _analyze_publications(

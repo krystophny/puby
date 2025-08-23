@@ -746,7 +746,16 @@ class ZoteroLibrary(PublicationSource):
                 # Public library access
                 self.zot = zotero.Zotero(self.library_id, self.library_type)
         except Exception as e:
-            raise ValueError(f"Failed to initialize Zotero client: {e}") from e
+            # Provide helpful guidance for common authentication issues
+            error_msg = str(e).lower()
+            if any(term in error_msg for term in ['api key', 'auth', 'credentials', 'unauthorized']):
+                raise ValueError(
+                    f"Failed to initialize Zotero client: {e}. "
+                    f"Please ensure you have a valid API key. "
+                    f"Get your API key at: https://www.zotero.org/settings/keys"
+                ) from e
+            else:
+                raise ValueError(f"Failed to initialize Zotero client: {e}") from e
 
     def fetch(self) -> List[Publication]:
         """Fetch publications from Zotero library."""
@@ -762,7 +771,21 @@ class ZoteroLibrary(PublicationSource):
                     publications.append(pub)
 
         except Exception as e:
-            self.logger.error(f"Error fetching Zotero data: {e}")
+            # Provide clear feedback for authentication issues
+            error_msg = str(e).lower()
+            if any(term in error_msg for term in ['auth', 'unauthorized', 'forbidden', 'api key', 'credentials']):
+                self.logger.error(
+                    f"Zotero authentication failed: {e}. "
+                    f"Please check your API key is valid. "
+                    f"Get your API key at: https://www.zotero.org/settings/keys"
+                )
+                raise ValueError(
+                    f"Zotero API authentication failed. Please provide a valid API key. "
+                    f"Get your API key at: https://www.zotero.org/settings/keys"
+                ) from e
+            else:
+                self.logger.error(f"Error fetching Zotero data: {e}")
+                raise ValueError(f"Failed to fetch Zotero data: {e}") from e
 
         return publications
 
@@ -866,7 +889,8 @@ class ZoteroSource(PublicationSource):
                 if not self.config.group_id:
                     raise ValueError(
                         "User ID is required for user library type. "
-                        "Please provide your numeric user ID in the group_id field."
+                        "Please provide your numeric user ID in the group_id field. "
+                        "You can find your user ID at: https://www.zotero.org/settings/keys"
                     )
                 library_id = self.config.group_id
 
@@ -874,7 +898,16 @@ class ZoteroSource(PublicationSource):
                 library_id, self.config.library_type, self.config.api_key
             )
         except Exception as e:
-            raise ValueError(f"Failed to initialize Zotero client: {e}") from e
+            # Provide helpful guidance for common authentication issues
+            error_msg = str(e).lower()
+            if any(term in error_msg for term in ['api key', 'auth', 'credentials', 'unauthorized']):
+                raise ValueError(
+                    f"Failed to initialize Zotero client: {e}. "
+                    f"Please ensure you have a valid API key. "
+                    f"Get your API key at: https://www.zotero.org/settings/keys"
+                ) from e
+            else:
+                raise ValueError(f"Failed to initialize Zotero client: {e}") from e
 
     def fetch(self) -> List[Publication]:
         """Fetch publications from Zotero library with pagination support."""
@@ -893,8 +926,22 @@ class ZoteroSource(PublicationSource):
                     publications.append(pub)
 
         except Exception as e:
-            self.logger.error(f"Error fetching Zotero data: {e}")
-            return []
+            # Provide clear feedback for authentication issues
+            error_msg = str(e).lower()
+            if any(term in error_msg for term in ['auth', 'unauthorized', 'forbidden', 'api key', 'credentials']):
+                self.logger.error(
+                    f"Zotero authentication failed: {e}. "
+                    f"Please check your API key is valid. "
+                    f"Get your API key at: https://www.zotero.org/settings/keys"
+                )
+                raise ValueError(
+                    f"Zotero API authentication failed. Please provide a valid API key. "
+                    f"Get your API key at: https://www.zotero.org/settings/keys"
+                ) from e
+            else:
+                self.logger.error(f"Error fetching Zotero data: {e}")
+                # Don't silently return empty list - propagate the error
+                raise ValueError(f"Failed to fetch Zotero data: {e}") from e
 
         self.logger.info(f"Parsed {len(publications)} publications from Zotero")
         return publications

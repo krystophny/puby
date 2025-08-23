@@ -173,7 +173,7 @@ class TestZoteroConfig:
         config = ZoteroConfig(api_key="", group_id="12345", library_type="group")
         assert not config.is_valid()
         errors = config.validation_errors()
-        assert "API key is required" in errors
+        assert any("API key is required" in error for error in errors)
 
     def test_zotero_config_validation_invalid_library_type(self):
         """Test invalid library type validation."""
@@ -199,7 +199,7 @@ class TestZoteroConfig:
         config = ZoteroConfig(api_key="valid_key", library_type="user")
         assert not config.is_valid()
         errors = config.validation_errors()
-        assert "User ID is required for user library type" in errors
+        assert any("User ID is required for user library type" in error for error in errors)
 
     def test_zotero_config_validation_group_type_missing_group_id(self):
         """Test group library type validation without group ID."""
