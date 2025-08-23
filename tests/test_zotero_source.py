@@ -12,8 +12,14 @@ from puby.sources import ZoteroSource
 class TestZoteroSource:
     """Test ZoteroSource implementation."""
 
-    def test_zotero_source_creation_with_config(self):
+    @patch("puby.sources.zotero.Zotero")
+    def test_zotero_source_creation_with_config(self, mock_zotero):
         """Test creating ZoteroSource with configuration."""
+        # Mock successful connection
+        mock_client = Mock()
+        mock_client.collections.return_value = []
+        mock_zotero.return_value = mock_client
+        
         config = ZoteroConfig(
             api_key="test_api_key", group_id="12345", library_type="group"
         )
@@ -458,6 +464,152 @@ class TestZoteroSource:
             pub = source._parse_zotero_item(item)
             assert pub is not None
             assert pub.year == expected_year, f"Failed for date: '{date_str}'"
+
+    @patch("puby.sources.zotero.Zotero")
+    def test_validate_connection_success(self, mock_zotero):
+        """Test successful connection validation."""
+        # Mock successful connection test
+        mock_client = Mock()
+        mock_client.collections.return_value = []  # Empty list means success
+        mock_zotero.return_value = mock_client
+
+        config = ZoteroConfig(
+            api_key="test_key", group_id="12345", library_type="group"
+        )
+        source = ZoteroSource(config)
+        
+        # Should not raise any exception
+        source.validate_connection()
+        
+        # Verify collections was called to test connection 
+        # (once during init, once during explicit call)
+        assert mock_client.collections.call_count == 2
+
+    @patch("puby.sources.zotero.Zotero")
+    def test_validate_connection_invalid_api_key(self, mock_zotero):
+        """Test connection validation with invalid API key."""
+        # Mock authentication failure only on second call
+        mock_client = Mock()
+        mock_client.collections.side_effect = [
+            [],  # First call during init succeeds
+            Exception("403 Forbidden")  # Second explicit call fails
+        ]
+        mock_zotero.return_value = mock_client
+
+        config = ZoteroConfig(
+            api_key="invalid_key", group_id="12345", library_type="group"
+        )
+        source = ZoteroSource(config)
+        
+        # Should raise clear error about authentication
+        with pytest.raises(ValueError, match="Zotero authentication failed"):
+            source.validate_connection()
+
+    @patch("puby.sources.zotero.Zotero")
+    def test_validate_connection_network_error(self, mock_zotero):
+        """Test connection validation with network error."""
+        # Mock network failure only on second call
+        mock_client = Mock()
+        mock_client.collections.side_effect = [
+            [],  # First call during init succeeds
+            requests.ConnectionError("Network error")  # Second explicit call fails
+        ]
+        mock_zotero.return_value = mock_client
+
+        config = ZoteroConfig(
+            api_key="test_key", group_id="12345", library_type="group"
+        )
+        source = ZoteroSource(config)
+        
+        # Should raise clear error about network
+        with pytest.raises(ValueError, match="Zotero connection failed.*Network"):
+            source.validate_connection()
+
+    @patch("puby.sources.zotero.Zotero")
+    def test_validate_connection_invalid_library(self, mock_zotero):
+        """Test connection validation with invalid library ID."""
+        # Mock library not found error only on second call
+        mock_client = Mock()
+        mock_client.collections.side_effect = [
+            [],  # First call during init succeeds
+            Exception("404 Not Found")  # Second explicit call fails
+        ]
+        mock_zotero.return_value = mock_client
+
+        config = ZoteroConfig(
+            api_key="test_key", group_id="99999", library_type="group"
+        )
+        source = ZoteroSource(config)
+        
+        # Should raise clear error about library not found
+        with pytest.raises(ValueError, match="Zotero library.*not found"):
+            source.validate_connection()
+
+    @patch("puby.sources.zotero.Zotero")
+    def test_validate_connection_on_init(self, mock_zotero):
+        """Test that connection is validated on initialization."""
+        # Mock successful connection
+        mock_client = Mock()
+        mock_client.collections.return_value = []
+        mock_zotero.return_value = mock_client
+
+        config = ZoteroConfig(
+            api_key="test_key", group_id="12345", library_type="group"
+        )
+        
+        # Create source - should validate connection
+        source = ZoteroSource(config)
+        
+        # Verify connection was validated during init
+        mock_client.collections.assert_called_once()
+
+    @patch("puby.sources.zotero.Zotero")
+    def test_init_with_connection_failure(self, mock_zotero):
+        """Test initialization with connection failure."""
+        # Mock connection failure during init
+        mock_client = Mock()
+        mock_client.collections.side_effect = Exception("403 Forbidden")
+        mock_zotero.return_value = mock_client
+
+        config = ZoteroConfig(
+            api_key="invalid_key", group_id="12345", library_type="group"
+        )
+        
+        # Should raise error during initialization due to authentication failure
+        with pytest.raises(ValueError, match="Failed to initialize Zotero client.*auth"):
+            ZoteroSource(config)
+
+    @patch("puby.sources.zotero.Zotero")
+    def test_fetch_with_connection_error_vs_missing(self, mock_zotero):
+        """Test distinguishing between connection errors and missing publications."""
+        # First test - connection error during fetch
+        mock_client = Mock()
+        mock_client.collections.return_value = []  # Connection OK for init
+        mock_client.everything.side_effect = requests.ConnectionError("Network error")
+        mock_client.top.return_value = []
+        mock_zotero.return_value = mock_client
+
+        config = ZoteroConfig(
+            api_key="test_key", group_id="12345", library_type="group"
+        )
+        source = ZoteroSource(config)
+        
+        # Should raise connection error, not return empty list
+        with pytest.raises(ValueError, match="connection failed"):
+            source.fetch()
+        
+        # Second test - truly empty library
+        mock_client2 = Mock()
+        mock_client2.collections.return_value = []  # Connection OK for init
+        mock_client2.everything.return_value = []  # No items
+        mock_client2.top.return_value = []
+        mock_zotero.return_value = mock_client2
+
+        source2 = ZoteroSource(config)
+        publications = source2.fetch()
+        
+        # Should return empty list without error
+        assert publications == []
 
     @patch("puby.sources.zotero.Zotero")
     def test_integration_zotero_api_flow(self, mock_zotero):
