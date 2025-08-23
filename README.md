@@ -77,13 +77,83 @@ puby check \
   --api-key=YOUR_PRIVATE_API_KEY
 ```
 
+## HTTP Client API
+
+puby includes a Fortran HTTP client built on libcurl for API integration:
+
+```fortran
+program example
+    use puby_http
+    implicit none
+    
+    type(http_client_t) :: client
+    type(http_response_t) :: response
+    
+    ! Initialize client with default settings
+    call http_client_init(client)
+    
+    ! Make a GET request
+    call http_get(client, "https://httpbin.org/get", response)
+    if (response%success .and. response%status_code == 200) then
+        print *, "Response body: ", response%body
+    end if
+    
+    ! Make a POST request with form data
+    call http_post(client, "https://httpbin.org/post", "key=value", response)
+    
+    ! Cleanup
+    call http_client_cleanup(client)
+end program
+```
+
+### Custom Configuration
+
+```fortran
+type(http_config_t) :: config
+type(http_client_t) :: client
+
+! Configure client settings
+call http_config_init(config, &
+    user_agent="MyApp/1.0", &
+    timeout=60, &
+    follow_redirects=.true., &
+    verify_ssl=.true.)
+
+! Initialize client with custom config
+call http_client_init(client, config)
+
+! Use client...
+
+call http_client_cleanup(client)
+call http_config_cleanup(config)
+```
+
 ## Requirements
 
 - Fortran compiler (gfortran recommended)
 - Fortran Package Manager (fpm)
-- curl library for HTTP requests
+- libcurl development headers and libraries
 - At least one publication source URL
 - Zotero group ID
+
+### Installing libcurl
+
+Ubuntu/Debian:
+```bash
+sudo apt-get install libcurl4-openssl-dev
+```
+
+RedHat/CentOS/Fedora:
+```bash
+sudo yum install libcurl-devel
+# or
+sudo dnf install libcurl-devel
+```
+
+macOS:
+```bash
+brew install curl
+```
 
 ## URL Formats
 
