@@ -10,6 +10,7 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
+- [x] #42: fix: test suite failures after PR #41 source refactoring (branch: fix-42-test-failures-after-pr41)
 
 ## DONE (Completed)
 - [x] #29: feat: add Zotero My Publications endpoint support (PR #41)
