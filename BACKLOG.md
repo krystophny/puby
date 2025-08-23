@@ -1,10 +1,10 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #25: refactor: sources.py exceeds size limit
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
+- [ ] #25: refactor: sources.py exceeds size limit
 
 ## DONE (Completed)
 - [x] #23: fix: test suite regression - message mismatch (PR #48)
