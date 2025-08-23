@@ -19,7 +19,8 @@ dependencies = [
     "pyzotero>=1.5",
     "python-dateutil>=2.8",
     "colorama>=0.4",
-    "tabulate>=0.9"
+    "tabulate>=0.9",
+    "python-dotenv>=0.19.0"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

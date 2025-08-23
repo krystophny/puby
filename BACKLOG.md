@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #30: feat: add .env file support for API keys
 - [ ] #28: feat: add Zotero user ID auto-discovery from API key
 - [ ] #22: fix: Zotero connection validation missing
 - [ ] #24: fix: no API key validation
@@ -16,6 +15,7 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
+- [ ] #30: feat: add .env file support for API keys (branch: feat-30-env-file-support)
 
 ## DONE (Completed)
 - [x] #34: bug: be honest about missing API keys - never fake functionality (PR #35)

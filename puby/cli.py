@@ -7,6 +7,7 @@ import click
 from colorama import init as colorama_init
 
 from .client import PublicationClient
+from .env import get_api_key
 from .matcher import PublicationMatcher
 from .models import Publication
 from .reporter import ConsoleReporter
@@ -224,9 +225,12 @@ def check(
     """Compare publications across sources and identify missing or duplicate entries."""
     _validate_sources(scholar, orcid, pure)
 
+    # Get API key with proper precedence (CLI > env > .env)
+    resolved_api_key = get_api_key(api_key)
+
     client = PublicationClient(verbose=verbose)
     sources = _initialize_sources(scholar, orcid, pure)
-    zotero_lib = _initialize_zotero(zotero, api_key)
+    zotero_lib = _initialize_zotero(zotero, resolved_api_key)
 
     all_publications = _fetch_source_publications(client, sources, verbose)
     zotero_pubs = _fetch_zotero_publications(client, zotero_lib, verbose)
