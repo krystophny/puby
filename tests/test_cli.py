@@ -621,3 +621,140 @@ class TestCLIZoteroSourceIntegration:
         mock_zotero_source.assert_called_once()
         config_arg = mock_zotero_source.call_args[0][0]
         assert config_arg.library_type == "group"  # Default for backward compatibility
+
+    @patch("puby.cli._export_missing_publications")
+    @patch("puby.cli.PublicationClient")
+    @patch("puby.cli.ORCIDSource")
+    @patch("puby.cli.ZoteroSource")
+    def test_check_command_with_export_missing(
+        self, mock_zotero_source, mock_orcid_source, mock_client, mock_export
+    ):
+        """Test check command with --export-missing option."""
+        # ORCID has publications that Zotero doesn't
+        missing_pub = Publication(
+            title="Missing Paper",
+            authors=[Author(name="John Doe")],
+            year=2023,
+            doi="10.1000/missing",
+        )
+
+        mock_client_instance = Mock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.fetch_publications.side_effect = [
+            [missing_pub],  # ORCID has publication
+            [],  # Zotero is empty
+        ]
+        
+        # Mock ZoteroSource instance
+        mock_zotero_instance = Mock()
+        mock_zotero_source.return_value = mock_zotero_instance
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000",
+                "--zotero",
+                "12345",
+                "--export-missing",
+                "missing_pubs.bib",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "Missing from Zotero: 1" in result.output
+        assert "Exported 1 missing publications to missing_pubs.bib" in result.output
+        
+        # Verify export function was called with correct arguments
+        mock_export.assert_called_once_with([missing_pub], "missing_pubs.bib")
+
+    @patch("puby.cli._export_missing_publications")  
+    @patch("puby.cli.PublicationClient")
+    @patch("puby.cli.ORCIDSource")
+    @patch("puby.cli.ZoteroSource")
+    def test_check_command_export_missing_default_filename(
+        self, mock_zotero_source, mock_orcid_source, mock_client, mock_export
+    ):
+        """Test check command with --export-missing using default filename."""
+        missing_pub = Publication(
+            title="Missing Paper",
+            authors=[Author(name="John Doe")],
+            year=2023,
+        )
+
+        mock_client_instance = Mock()
+        mock_client.return_value = mock_client_instance  
+        mock_client_instance.fetch_publications.side_effect = [
+            [missing_pub],  # ORCID has publication
+            [],  # Zotero is empty
+        ]
+        
+        mock_zotero_instance = Mock()
+        mock_zotero_source.return_value = mock_zotero_instance
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid", 
+                "https://orcid.org/0000-0000-0000-0000",
+                "--zotero",
+                "12345",
+                "--export-missing",
+                "missing_publications.bib",  # Explicitly provide filename
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "Exported 1 missing publications to missing_publications.bib" in result.output
+        
+        # Should use provided filename
+        mock_export.assert_called_once_with([missing_pub], "missing_publications.bib")
+
+    @patch("puby.cli._export_missing_publications")
+    @patch("puby.cli.PublicationClient") 
+    @patch("puby.cli.ORCIDSource")
+    @patch("puby.cli.ZoteroSource")
+    def test_check_command_export_missing_no_missing_publications(
+        self, mock_zotero_source, mock_orcid_source, mock_client, mock_export
+    ):
+        """Test check command with --export-missing when no publications are missing."""
+        mock_pub = Publication(
+            title="Existing Paper",
+            authors=[Author(name="John Doe")],
+            year=2023,
+        )
+
+        mock_client_instance = Mock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.fetch_publications.side_effect = [
+            [mock_pub],  # ORCID has publication
+            [mock_pub],  # Zotero has same publication
+        ]
+        
+        mock_zotero_instance = Mock()
+        mock_zotero_source.return_value = mock_zotero_instance
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000", 
+                "--zotero",
+                "12345",
+                "--export-missing",
+                "no_missing.bib",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "Missing from Zotero: 0" in result.output
+        assert "Exported 0 missing publications to no_missing.bib" in result.output
+        
+        # Should still call export with empty list
+        mock_export.assert_called_once_with([], "no_missing.bib")
