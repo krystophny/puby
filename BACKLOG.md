@@ -12,9 +12,9 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
-- [x] #24: fix: no API key validation (branch: fix-24-api-key-validation)
 
 ## DONE (Completed)
+- [x] #24: fix: no API key validation (PR #39)
 - [x] #22: fix: Zotero connection validation missing (PR #38)
 - [x] #28: feat: add Zotero user ID auto-discovery from API key (PR #37)
 - [x] #30: feat: add .env file support for API keys (PR #36)
