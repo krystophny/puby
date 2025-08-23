@@ -140,7 +140,7 @@ class ORCIDSource(PublicationSource):
         # If no contributors, add a placeholder
         if not authors:
             authors = [Author(name="[Authors not available]")]
-        
+
         return authors
 
     def _parse_work(self, work: Dict[str, Any]) -> Optional[Publication]:
@@ -263,7 +263,7 @@ class ZoteroLibrary(PublicationSource):
         publication_types = [
             "journalArticle",
             "book",
-            "bookSection", 
+            "bookSection",
             "conferencePaper",
             "thesis",
             "report",
@@ -395,7 +395,7 @@ class ZoteroSource(PublicationSource):
         """Check if Zotero item type represents a publication."""
         publication_types = [
             "journalArticle",
-            "book", 
+            "book",
             "bookSection",
             "conferencePaper",
             "thesis",

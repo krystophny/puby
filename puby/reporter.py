@@ -222,12 +222,18 @@ class AnalysisReporter:
             List of sync recommendations
         """
         recommendations = []
-        
+
         # Add recommendations from different analysis types
-        recommendations.extend(self._generate_missing_recommendations(result.missing_publications))
-        recommendations.extend(self._generate_duplicate_recommendations(result.duplicate_groups))
-        recommendations.extend(self._generate_potential_match_recommendations(result.potential_matches))
-        
+        recommendations.extend(
+            self._generate_missing_recommendations(result.missing_publications)
+        )
+        recommendations.extend(
+            self._generate_duplicate_recommendations(result.duplicate_groups)
+        )
+        recommendations.extend(
+            self._generate_potential_match_recommendations(result.potential_matches)
+        )
+
         return recommendations
 
     def _generate_missing_recommendations(
@@ -249,7 +255,7 @@ class AnalysisReporter:
     ) -> List[SyncRecommendation]:
         """Generate recommendations for duplicate publications."""
         recommendations = []
-        
+
         for group in duplicate_groups:
             if len(group) > 1:
                 primary = self._select_primary_publication(group)
@@ -263,7 +269,7 @@ class AnalysisReporter:
                                 confidence=0.85,
                             )
                         )
-        
+
         return recommendations
 
     def _generate_potential_match_recommendations(

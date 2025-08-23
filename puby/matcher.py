@@ -73,7 +73,9 @@ class PublicationMatcher:
             match_reasons=reasons,
         )
 
-    def _check_doi_match(self, pub1: Publication, pub2: Publication) -> Optional[MatchResult]:
+    def _check_doi_match(
+        self, pub1: Publication, pub2: Publication
+    ) -> Optional[MatchResult]:
         """Check for definitive DOI match between publications."""
         if pub1.doi and pub2.doi:
             if self._normalize_doi(pub1.doi) == self._normalize_doi(pub2.doi):
@@ -95,7 +97,9 @@ class PublicationMatcher:
                 )
         return None
 
-    def _calculate_similarity(self, pub1: Publication, pub2: Publication) -> tuple[float, List[str]]:
+    def _calculate_similarity(
+        self, pub1: Publication, pub2: Publication
+    ) -> tuple[float, List[str]]:
         """Calculate similarity score and reasons between two publications."""
         confidence = 0.0
         reasons = []

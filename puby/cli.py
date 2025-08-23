@@ -22,7 +22,9 @@ from .sources import (
 colorama_init()
 
 
-def _validate_sources(scholar: Optional[str], orcid: Optional[str], pure: Optional[str]) -> None:
+def _validate_sources(
+    scholar: Optional[str], orcid: Optional[str], pure: Optional[str]
+) -> None:
     """Validate that at least one source is provided."""
     if not any([scholar, orcid, pure]):
         click.echo(
@@ -73,7 +75,7 @@ def _fetch_source_publications(
 ) -> List[Publication]:
     """Fetch publications from all configured sources."""
     click.echo("Fetching publications from sources...")
-    
+
     all_publications = []
     for source in sources:
         if verbose:
@@ -82,7 +84,7 @@ def _fetch_source_publications(
         all_publications.extend(pubs)
         if verbose:
             click.echo(f"    Found {len(pubs)} publications")
-    
+
     return all_publications
 
 
@@ -121,7 +123,7 @@ def _analyze_publications(
 def _report_results(analysis_results: dict, format: str) -> None:
     """Report analysis results and summary statistics."""
     reporter = ConsoleReporter(format=format)
-    
+
     # Report findings
     reporter.report_missing(analysis_results["missing"])
     reporter.report_duplicates(analysis_results["duplicates"])
@@ -141,11 +143,17 @@ def _print_summary(analysis_results: dict) -> None:
     """Print summary statistics."""
     click.echo("\n" + "=" * 60)
     click.echo("Summary:")
-    click.echo(f"  Total publications in sources: {len(analysis_results['all_publications'])}")
-    click.echo(f"  Total publications in Zotero: {len(analysis_results['zotero_pubs'])}")
+    click.echo(
+        f"  Total publications in sources: {len(analysis_results['all_publications'])}"
+    )
+    click.echo(
+        f"  Total publications in Zotero: {len(analysis_results['zotero_pubs'])}"
+    )
     click.echo(f"  Missing from Zotero: {len(analysis_results['missing'])}")
     click.echo(f"  Duplicates in Zotero: {len(analysis_results['duplicates'])}")
-    click.echo(f"  Potential matches to review: {len(analysis_results['potential_matches'])}")
+    click.echo(
+        f"  Potential matches to review: {len(analysis_results['potential_matches'])}"
+    )
 
 
 @click.group()
@@ -204,14 +212,14 @@ def check(
 ) -> None:
     """Compare publications across sources and identify missing or duplicate entries."""
     _validate_sources(scholar, orcid, pure)
-    
+
     client = PublicationClient(verbose=verbose)
     sources = _initialize_sources(scholar, orcid, pure)
     zotero_lib = _initialize_zotero(zotero, api_key)
-    
+
     all_publications = _fetch_source_publications(client, sources, verbose)
     zotero_pubs = _fetch_zotero_publications(client, zotero_lib, verbose)
-    
+
     analysis_results = _analyze_publications(all_publications, zotero_pubs)
     _report_results(analysis_results, format)
 
