@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #26: fix: ZoteroSource class not integrated into CLI
 - [ ] #29: feat: add Zotero My Publications endpoint support
 - [ ] #31: feat: add standardized citation key generation
 - [ ] #32: feat: add fuzzy title matching with configurable threshold
@@ -12,6 +11,7 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
+- [x] #26: fix: ZoteroSource class not integrated into CLI (branch: fix-26-zotero-source-cli-integration)
 
 ## DONE (Completed)
 - [x] #24: fix: no API key validation (PR #39)
