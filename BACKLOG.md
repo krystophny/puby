@@ -1,10 +1,10 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #9: feat: add Google Scholar profile parsing support
 - [ ] #10: feat: add Pure research portal support
 
 ## DOING (Current Work)
+- [x] #9: feat: add Google Scholar profile parsing support (branch: feat-google-scholar-9)
 
 ## DONE (Completed)
 - [x] #8: feat: integrate CLI with all components for MVP workflow (PR #18)
