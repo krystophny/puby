@@ -1,11 +1,11 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #8: feat: integrate CLI with all components for MVP workflow
 - [ ] #9: feat: add Google Scholar profile parsing support
 - [ ] #10: feat: add Pure research portal support
 
 ## DOING (Current Work)
+- [x] #8: feat: integrate CLI with all components for MVP workflow (branch: feat-cli-integration-8)
 
 ## DONE (Completed)
 - [x] #7: feat: implement report generation and output formatting (PR #17)
