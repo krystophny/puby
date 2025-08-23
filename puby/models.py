@@ -180,6 +180,8 @@ class ZoteroConfig:
     api_key: str
     group_id: Optional[str] = None
     library_type: str = "user"
+    use_my_publications: bool = False
+    format: str = "json"
 
     def is_valid(self) -> bool:
         """Check if configuration is valid."""
@@ -206,6 +208,9 @@ class ZoteroConfig:
 
         if self.library_type == "group" and not self.group_id:
             errors.append("Group ID is required for group library type")
+
+        if self.format not in ("json", "bibtex"):
+            errors.append("Format must be 'json' or 'bibtex'")
 
         # User ID is now optional for user libraries (will be auto-discovered)
         # No validation error for missing user ID

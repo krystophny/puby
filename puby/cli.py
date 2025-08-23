@@ -73,7 +73,11 @@ def _initialize_zotero(zotero: str, api_key: Optional[str]) -> ZoteroLibrary:
 
 
 def _initialize_zotero_source(
-    zotero: Optional[str], library_type: str, api_key: Optional[str]
+    zotero: Optional[str], 
+    library_type: str, 
+    api_key: Optional[str],
+    use_my_publications: bool = False,
+    format: str = "json"
 ) -> ZoteroSource:
     """Initialize modern ZoteroSource with error handling."""
     try:
@@ -82,6 +86,8 @@ def _initialize_zotero_source(
             api_key=api_key or "",
             group_id=zotero,  # Can be None for user libraries (auto-discovery)
             library_type=library_type,
+            use_my_publications=use_my_publications,
+            format=format,
         )
         
         return ZoteroSource(config)
@@ -92,8 +98,12 @@ def _initialize_zotero_source(
         if library_type == "user":
             click.echo("2. For user libraries, you can omit --zotero and let the system auto-discover your user ID", err=True)
             click.echo("   OR provide your user ID with --zotero YOUR_USER_ID", err=True)
+            if use_my_publications:
+                click.echo("3. My Publications endpoint is only available for user libraries", err=True)
         else:
             click.echo("2. For group libraries, provide the group ID with --zotero GROUP_ID", err=True)
+            if use_my_publications:
+                click.echo("3. My Publications endpoint is not available for group libraries", err=True)
         sys.exit(1)
 
 
@@ -236,6 +246,17 @@ def cli() -> None:
     help="Zotero library type (group or user library, defaults to group for backward compatibility)",
 )
 @click.option(
+    "--zotero-my-publications",
+    is_flag=True,
+    help="Use Zotero My Publications endpoint (user libraries only, returns authored publications)",
+)
+@click.option(
+    "--zotero-format",
+    type=click.Choice(["json", "bibtex"]),
+    default="json",
+    help="Format for Zotero My Publications endpoint (json or bibtex)",
+)
+@click.option(
     "--format",
     type=click.Choice(["table", "json", "csv", "bibtex"]),
     default="table",
@@ -253,6 +274,8 @@ def check(
     zotero: Optional[str],
     api_key: Optional[str],
     zotero_library_type: str,
+    zotero_my_publications: bool,
+    zotero_format: str,
     format: str,
     verbose: bool,
 ) -> None:
@@ -264,12 +287,19 @@ def check(
         click.echo("Error: --zotero is required for group library type.", err=True)
         sys.exit(1)
 
+    # Validate My Publications configuration
+    if zotero_my_publications and zotero_library_type == "group":
+        click.echo("Error: --zotero-my-publications is only supported for user libraries (--zotero-library-type user).", err=True)
+        sys.exit(1)
+
     # Get API key with proper precedence (CLI > env > .env)
     resolved_api_key = get_api_key(api_key)
 
     client = PublicationClient(verbose=verbose)
     sources = _initialize_sources(scholar, orcid, pure)
-    zotero_source = _initialize_zotero_source(zotero, zotero_library_type, resolved_api_key)
+    zotero_source = _initialize_zotero_source(
+        zotero, zotero_library_type, resolved_api_key, zotero_my_publications, zotero_format
+    )
 
     all_publications = _fetch_source_publications(client, sources, verbose)
     zotero_pubs = _fetch_zotero_publications(client, zotero_source, verbose)

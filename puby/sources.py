@@ -848,6 +848,24 @@ class ZoteroSource(PublicationSource):
 
     def fetch(self) -> List[Publication]:
         """Fetch publications from Zotero library with pagination support."""
+        # Try My Publications endpoint if enabled for user libraries
+        if self.config.use_my_publications and self.config.library_type == "user":
+            try:
+                return self._fetch_my_publications()
+            except Exception as e:
+                error_msg = str(e).lower()
+                # If My Publications endpoint fails, fall back to regular library
+                if "404" in error_msg or "not found" in error_msg:
+                    self.logger.info("My Publications endpoint not available, falling back to regular library")
+                else:
+                    # Re-raise other errors (auth, network, etc.)
+                    raise
+
+        # Regular library fetch
+        return self._fetch_library_items()
+
+    def _fetch_library_items(self) -> List[Publication]:
+        """Fetch publications from regular Zotero library."""
         publications = []
 
         try:
@@ -889,6 +907,204 @@ class ZoteroSource(PublicationSource):
 
         self.logger.info(f"Parsed {len(publications)} publications from Zotero")
         return publications
+
+    def _fetch_my_publications(self) -> List[Publication]:
+        """Fetch publications from Zotero My Publications endpoint."""
+        publications = []
+        start = 0
+        limit = 100
+        
+        # Get user ID - already available from initialization
+        if self.config.library_type != "user":
+            raise ValueError("My Publications endpoint is only available for user libraries")
+            
+        user_id = self.config.group_id
+        if not user_id:
+            # Auto-discover user ID if not provided
+            user_id = self._autodiscover_user_id(self.config.api_key)
+        
+        self.logger.info(f"Fetching from My Publications endpoint for user {user_id}")
+        
+        try:
+            while True:
+                # Build API URL
+                url = f"https://api.zotero.org/users/{user_id}/publications/items"
+                
+                # Set headers based on format
+                if self.config.format == "bibtex":
+                    headers = {
+                        "Zotero-API-Key": self.config.api_key,
+                        "Accept": "application/x-bibtex"
+                    }
+                    params = {"format": "bibtex", "limit": limit, "start": start}
+                else:
+                    headers = {
+                        "Zotero-API-Key": self.config.api_key,
+                        "Accept": "application/json"
+                    }
+                    params = {"format": "json", "limit": limit, "start": start}
+                
+                # Make API request
+                response = requests.get(url, headers=headers, params=params)
+                
+                # Handle response
+                if response.status_code == 403:
+                    raise ValueError(
+                        f"Zotero My Publications authentication failed: Invalid API key. "
+                        f"Please check your API key at: https://www.zotero.org/settings/keys"
+                    )
+                elif response.status_code == 404:
+                    raise ValueError("My Publications endpoint not found")
+                elif response.status_code != 200:
+                    response.raise_for_status()
+                
+                # Parse response based on format
+                if self.config.format == "bibtex":
+                    page_pubs = self._parse_bibtex_response(response.text)
+                    if not page_pubs:
+                        break
+                    publications.extend(page_pubs)
+                    # BibTeX doesn't have clear pagination markers, so we break after first page
+                    break
+                else:
+                    items = response.json()
+                    if not items:
+                        break
+                    
+                    for item in items:
+                        pub = self._parse_zotero_item(item)
+                        if pub:
+                            # Mark as from My Publications
+                            pub.source = "Zotero My Publications"
+                            publications.append(pub)
+                
+                # Check if we need to fetch more pages (JSON format only)
+                if self.config.format == "json" and len(items) < limit:
+                    break
+                elif self.config.format == "json":
+                    start += limit
+                else:
+                    # BibTeX format - no pagination supported
+                    break
+                
+        except requests.ConnectionError as e:
+            raise ValueError(f"Zotero My Publications connection failed: Network error. Please check your internet connection.") from e
+        except requests.HTTPError as e:
+            error_msg = str(e).lower()
+            if "403" in error_msg or "forbidden" in error_msg:
+                raise ValueError(
+                    f"Zotero My Publications authentication failed: Invalid API key. "
+                    f"Please check your API key at: https://www.zotero.org/settings/keys"
+                ) from e
+            else:
+                raise ValueError(f"Failed to fetch My Publications: {e}") from e
+        except Exception as e:
+            raise ValueError(f"Failed to fetch My Publications: {e}") from e
+
+        self.logger.info(f"Parsed {len(publications)} publications from My Publications")
+        return publications
+
+    def _parse_bibtex_response(self, bibtex_content: str) -> List[Publication]:
+        """Parse BibTeX response from My Publications endpoint."""
+        publications = []
+        
+        # Simple BibTeX parser for the My Publications endpoint
+        # Split on @article, @book, etc.
+        import re
+        
+        entries = re.split(r'@\w+\s*\{', bibtex_content)
+        
+        for entry in entries[1:]:  # Skip first empty split
+            try:
+                pub = self._parse_bibtex_entry(entry)
+                if pub:
+                    pub.source = "Zotero My Publications"
+                    publications.append(pub)
+            except Exception as e:
+                self.logger.warning(f"Failed to parse BibTeX entry: {e}")
+                continue
+        
+        return publications
+
+    def _parse_bibtex_entry(self, entry: str) -> Optional[Publication]:
+        """Parse a single BibTeX entry."""
+        try:
+            import re
+            
+            # Extract title
+            title_match = re.search(r'title\s*=\s*\{([^}]+)\}', entry, re.IGNORECASE)
+            title = title_match.group(1) if title_match else ""
+            
+            if not title:
+                return None
+            
+            # Extract author
+            author_match = re.search(r'author\s*=\s*\{([^}]+)\}', entry, re.IGNORECASE)
+            author_str = author_match.group(1) if author_match else ""
+            
+            # Parse authors - simple parsing for "Last, First and Last2, First2" format
+            authors = []
+            if author_str:
+                author_parts = author_str.split(' and ')
+                for author_part in author_parts:
+                    author_part = author_part.strip()
+                    if ',' in author_part:
+                        parts = author_part.split(',', 1)
+                        family_name = parts[0].strip()
+                        given_name = parts[1].strip() if len(parts) > 1 else None
+                        full_name = f"{given_name} {family_name}".strip() if given_name else family_name
+                        authors.append(Author(
+                            name=full_name,
+                            given_name=given_name,
+                            family_name=family_name
+                        ))
+                    else:
+                        authors.append(Author(name=author_part))
+            
+            if not authors:
+                authors = [Author(name="[No authors]")]
+            
+            # Extract year
+            year_match = re.search(r'year\s*=\s*\{([^}]+)\}', entry, re.IGNORECASE)
+            year_str = year_match.group(1) if year_match else ""
+            year = None
+            if year_str:
+                try:
+                    year = int(year_str)
+                except ValueError:
+                    pass
+            
+            # Extract journal
+            journal_match = re.search(r'journal\s*=\s*\{([^}]+)\}', entry, re.IGNORECASE)
+            journal = journal_match.group(1) if journal_match else None
+            
+            # Extract DOI
+            doi_match = re.search(r'doi\s*=\s*\{([^}]+)\}', entry, re.IGNORECASE)
+            doi = doi_match.group(1) if doi_match else None
+            
+            # Extract volume
+            volume_match = re.search(r'volume\s*=\s*\{([^}]+)\}', entry, re.IGNORECASE)
+            volume = volume_match.group(1) if volume_match else None
+            
+            # Extract pages
+            pages_match = re.search(r'pages\s*=\s*\{([^}]+)\}', entry, re.IGNORECASE)
+            pages = pages_match.group(1) if pages_match else None
+            
+            return Publication(
+                title=title,
+                authors=authors,
+                year=year,
+                journal=journal,
+                doi=doi,
+                volume=volume,
+                pages=pages,
+                source="Zotero My Publications",
+                raw_data={"bibtex": entry}
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Error parsing BibTeX entry: {e}")
+            return None
 
     def _is_publication_item(self, item_type: str) -> bool:
         """Check if Zotero item type represents a publication."""
