@@ -1,11 +1,15 @@
 """Publication sources for fetching data."""
 
 import logging
+import random
 import re
+import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import parse_qs, urlparse
 
 import requests
+from bs4 import BeautifulSoup
 from pyzotero import zotero
 
 from .models import Author, Publication, ZoteroConfig
@@ -173,24 +177,241 @@ class ORCIDSource(PublicationSource):
 
 
 class ScholarSource(PublicationSource):
-    """Fetch publications from Google Scholar."""
+    """Fetch publications from Google Scholar profile via web scraping."""
 
     def __init__(self, scholar_url: str):
         """Initialize Scholar source."""
         self.scholar_url = scholar_url
+        self.scholar_user_id = self._extract_scholar_id(scholar_url)
         self.logger = logging.getLogger(__name__)
+        self.base_url = "https://scholar.google.com/citations"
+
+    def _extract_scholar_id(self, url: str) -> str:
+        """Extract Scholar user ID from URL or return direct ID."""
+        if not url:
+            raise ValueError("Invalid Google Scholar URL or ID: empty string")
+
+        # Check if it's already just a user ID (looks like Scholar ID pattern)
+        # Scholar IDs are typically alphanumeric, may contain underscores/hyphens
+        # but should not contain words like "invalid", "scholar", "url" etc.
+        if (re.match(r'^[A-Za-z0-9_-]+$', url) and 
+            not url.startswith('http') and 
+            len(url) > 3 and len(url) < 50 and
+            not any(word in url.lower() for word in ['invalid', 'scholar', 'url', 'google'])):
+            return url
+
+        # Try to extract user ID from URL
+        if 'scholar.google.com' in url:
+            parsed_url = urlparse(url)
+            query_params = parse_qs(parsed_url.query)
+            user_id = query_params.get('user', [])
+            if user_id:
+                return user_id[0]
+
+        raise ValueError(f"Invalid Google Scholar URL or ID: {url}")
+
+    def _build_url(self, start: int) -> str:
+        """Build Scholar profile URL with pagination."""
+        return (
+            f"{self.base_url}?user={self.scholar_user_id}&hl=en"
+            f"&cstart={start}&pagesize=100"
+        )
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Get headers with proper User-Agent."""
+        return {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            ),
+            "Accept": (
+                "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                "image/webp,*/*;q=0.8"
+            ),
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+        }
+
+    def _apply_rate_limit(self) -> None:
+        """Apply random delay to avoid being blocked."""
+        delay = random.uniform(1.0, 3.0)
+        time.sleep(delay)
 
     def fetch(self) -> List[Publication]:
-        """Fetch publications from Google Scholar."""
-        # Note: Google Scholar doesn't provide an official API
-        # This would require web scraping which may violate ToS
-        # For now, return empty list with a warning
+        """Fetch publications from Google Scholar profile."""
+        publications = []
+        start = 0
 
-        self.logger.warning(
-            "Google Scholar scraping is not implemented. "
-            "Consider using the scholarly library or manual export."
-        )
-        return []
+        try:
+            while True:
+                url = self._build_url(start)
+                self.logger.info(f"Fetching Scholar profile page: {url}")
+
+                response = requests.get(url, headers=self._get_headers())
+                response.raise_for_status()
+
+                soup = BeautifulSoup(response.text, 'html.parser')
+                page_pubs = self._parse_publications_page(soup)
+
+                if not page_pubs:
+                    # No more publications found
+                    break
+
+                publications.extend(page_pubs)
+
+                # Check if there are more pages
+                if not self._has_next_page(soup):
+                    break
+
+                start += 100
+                self._apply_rate_limit()
+
+        except requests.RequestException as e:
+            self.logger.error(f"Error fetching Google Scholar data: {e}")
+            return []
+
+        self.logger.info(f"Fetched {len(publications)} publications from Scholar")
+        return publications
+
+    def _has_next_page(self, soup: BeautifulSoup) -> bool:
+        """Check if there are more pages to fetch."""
+        next_button = soup.find('button', {'id': 'gsc_bpf_next'})
+        return next_button is not None and 'disabled' not in next_button.get('class', [])
+
+    def _parse_publications_page(self, soup: BeautifulSoup) -> List[Publication]:
+        """Parse publications from a single page."""
+        publications = []
+        
+        # Find publication table
+        pub_table = soup.find('div', {'id': 'gs_ccl'})
+        if not pub_table:
+            return publications
+
+        # Find all publication rows
+        pub_rows = pub_table.find_all('tr', class_='gsc_a_tr')
+
+        for row in pub_rows:
+            pub = self._parse_publication_row(row)
+            if pub:
+                publications.append(pub)
+
+        return publications
+
+    def _parse_publication_row(self, row) -> Optional[Publication]:
+        """Parse individual publication row."""
+        try:
+            # Extract title
+            title_cell = row.find('td', class_='gsc_a_t')
+            if not title_cell:
+                return None
+
+            title_link = title_cell.find('a', class_='gsc_a_at')
+            if not title_link:
+                return None
+
+            title = title_link.get_text(strip=True)
+            if not title:
+                return None
+
+            # Extract authors and publication info from gray divs
+            gray_divs = title_cell.find_all('div', class_='gs_gray')
+            
+            authors = []
+            journal = None
+            year = None
+
+            if len(gray_divs) >= 1:
+                # First gray div typically contains authors
+                authors = self._parse_authors(gray_divs[0].get_text(strip=True))
+            else:
+                # No author information available
+                authors = [Author(name="[Authors not available]")]
+
+            if len(gray_divs) >= 2:
+                # Second gray div typically contains journal and year
+                pub_info = gray_divs[1].get_text(strip=True)
+                journal, year = self._parse_journal_and_year(pub_info)
+
+            # Extract year from year column if not found in pub info
+            if year is None:
+                year_cell = row.find('td', class_='gsc_a_y')
+                if year_cell:
+                    year_span = year_cell.find('span', class_='gsc_a_h')
+                    if year_span:
+                        year_text = year_span.get_text(strip=True)
+                        try:
+                            year = int(year_text) if year_text else None
+                        except ValueError:
+                            year = None
+
+            return Publication(
+                title=title,
+                authors=authors,
+                year=year,
+                journal=journal,
+                source="Google Scholar",
+                raw_data={"html_row": str(row)},
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error parsing Scholar publication row: {e}")
+            return None
+
+    def _parse_authors(self, author_text: str) -> List[Author]:
+        """Parse authors from comma-separated text."""
+        if not author_text.strip():
+            return [Author(name="[Authors not available]")]
+
+        authors = []
+        for author in author_text.split(','):
+            author_name = author.strip()
+            if author_name:
+                authors.append(Author(name=author_name))
+
+        return authors if authors else [Author(name="[Authors not available]")]
+
+    def _parse_journal_and_year(self, pub_info: str) -> Tuple[Optional[str], Optional[int]]:
+        """Parse journal name and year from publication info string."""
+        if not pub_info.strip():
+            return None, None
+
+        # Handle special case: arXiv preprint with embedded year in identifier
+        arxiv_match = re.search(r'arXiv:(\d{4})\.', pub_info)
+        if arxiv_match:
+            year = int(arxiv_match.group(1))
+            # Remove the entire arXiv identifier for journal name
+            journal = re.sub(r'\s*arXiv:[\d.]+.*$', '', pub_info).strip()
+            return journal if journal else None, year
+
+        # Try to extract year (4 consecutive digits at end, preceded by comma or space)
+        year_match = re.search(r'[,\s]+((19|20)\d{2})$', pub_info)
+        year = int(year_match.group(1)) if year_match else None
+        
+        # If no year at end, try anywhere in the string
+        if not year:
+            year_match = re.search(r'\b(19|20)\d{2}\b', pub_info)
+            year = int(year_match.group()) if year_match else None
+
+        # Extract journal name
+        journal = pub_info
+        
+        if year_match:
+            # Everything before the year
+            journal = pub_info[:year_match.start()].strip()
+        
+        # Clean up journal name by removing common patterns
+        if journal:
+            # Remove volume/issue/page info patterns like " 15 (4), 123-130" at end
+            journal = re.sub(r'\s+\d+\s*\([^)]*\).*$', '', journal)
+            # Remove trailing volume numbers like " 400, 109001"
+            journal = re.sub(r'\s+\d+,.*$', '', journal)
+            # Remove trailing commas and whitespace
+            journal = re.sub(r'[,\s]+$', '', journal)
+            journal = journal.strip()
+
+        return journal if journal else None, year
 
 
 class PureSource(PublicationSource):
