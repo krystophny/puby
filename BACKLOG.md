@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #28: feat: add Zotero user ID auto-discovery from API key
 - [ ] #22: fix: Zotero connection validation missing
 - [ ] #24: fix: no API key validation
 - [ ] #26: fix: ZoteroSource class not integrated into CLI
@@ -15,6 +14,7 @@
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
+- [ ] #28: feat: add Zotero user ID auto-discovery from API key
 
 ## DONE (Completed)
 - [x] #30: feat: add .env file support for API keys (PR #36)
