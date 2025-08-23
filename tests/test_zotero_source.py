@@ -184,10 +184,10 @@ class TestZoteroSource:
             api_key="test_key", group_id="12345", library_type="group"
         )
         source = ZoteroSource(config)
-        publications = source.fetch()
-
-        # Should return empty list on error
-        assert publications == []
+        
+        # Should raise ValueError on error instead of silently returning empty list
+        with pytest.raises(ValueError, match="Failed to fetch Zotero data"):
+            source.fetch()
 
     @patch("puby.sources.zotero.Zotero")
     def test_parse_zotero_item_book(self, mock_zotero):
