@@ -1,11 +1,11 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #23: fix: test suite regression - message mismatch
 - [ ] #25: refactor: sources.py exceeds size limit
 - [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
+- [x] #23: fix: test suite regression - message mismatch (branch: fix-23-test-suite-regression-message-mismatch)
 
 ## DONE (Completed)
 - [x] #21: fix: inconsistent error handling between fetch and check commands (PR #47)
