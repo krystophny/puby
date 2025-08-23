@@ -1,9 +1,9 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #27: consider: extract common HTTP utilities
 
 ## DOING (Current Work)
+- [x] #27: consider: extract common HTTP utilities (analysis in progress)
 
 ## DONE (Completed)
 - [x] #25: refactor: sources.py exceeds size limit (PR #49)
