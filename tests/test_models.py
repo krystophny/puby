@@ -1,6 +1,5 @@
 """Tests for publication models."""
 
-
 from puby.models import Author, ORCIDConfig, Publication, ZoteroConfig
 
 
