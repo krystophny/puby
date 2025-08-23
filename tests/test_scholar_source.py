@@ -1,12 +1,11 @@
 """Tests for Google Scholar source implementation."""
 
+from unittest.mock import patch
+
 import pytest
 import responses
-from unittest.mock import patch
-import time
 
 from puby.sources import ScholarSource
-from puby.models import Author, Publication
 
 
 class TestScholarSource:
@@ -44,7 +43,7 @@ class TestScholarSource:
     @responses.activate
     def test_fetch_publications_success(self):
         """Test successful publication fetching from Google Scholar."""
-        mock_html = '''
+        mock_html = """
         <html>
         <body>
             <div id="gs_ccl">
@@ -89,7 +88,7 @@ class TestScholarSource:
             </div>
         </body>
         </html>
-        '''
+        """
 
         responses.add(
             responses.GET,
@@ -110,7 +109,7 @@ class TestScholarSource:
         assert pub1.journal == "Nature Physics"
         assert len(pub1.authors) == 3
         assert pub1.authors[0].name == "J Smith"
-        assert pub1.authors[1].name == "A Johnson" 
+        assert pub1.authors[1].name == "A Johnson"
         assert pub1.authors[2].name == "B Williams"
         assert pub1.source == "Google Scholar"
 
@@ -127,7 +126,7 @@ class TestScholarSource:
     def test_fetch_publications_with_pagination(self):
         """Test fetching publications across multiple pages."""
         # First page with more results indicator
-        page1_html = '''
+        page1_html = """
         <html>
         <body>
             <div id="gs_ccl">
@@ -144,10 +143,10 @@ class TestScholarSource:
             <button id="gsc_bpf_next" onclick="window.location='?user=ABC123&cstart=100'">Show more</button>
         </body>
         </html>
-        '''
+        """
 
         # Second page without more results indicator
-        page2_html = '''
+        page2_html = """
         <html>
         <body>
             <div id="gs_ccl">
@@ -163,7 +162,7 @@ class TestScholarSource:
             </div>
         </body>
         </html>
-        '''
+        """
 
         responses.add(
             responses.GET,
@@ -171,7 +170,7 @@ class TestScholarSource:
             body=page1_html,
             status=200,
         )
-        
+
         responses.add(
             responses.GET,
             "https://scholar.google.com/citations?user=ABC123&hl=en&cstart=100&pagesize=100",
@@ -180,7 +179,7 @@ class TestScholarSource:
         )
 
         # Mock time.sleep to speed up tests
-        with patch('time.sleep'):
+        with patch("time.sleep"):
             source = ScholarSource("ABC123")
             publications = source.fetch()
 
@@ -191,7 +190,7 @@ class TestScholarSource:
     @responses.activate
     def test_fetch_publications_empty_profile(self):
         """Test fetching from profile with no publications."""
-        empty_html = '''
+        empty_html = """
         <html>
         <body>
             <div id="gs_ccl">
@@ -199,7 +198,7 @@ class TestScholarSource:
             </div>
         </body>
         </html>
-        '''
+        """
 
         responses.add(
             responses.GET,
@@ -245,9 +244,9 @@ class TestScholarSource:
     def test_parse_publication_minimal_data(self):
         """Test parsing publication with minimal data."""
         source = ScholarSource("ABC123")
-        
+
         # Create a minimal publication row (just title)
-        minimal_html = '''
+        minimal_html = """
         <tr class="gsc_a_tr">
             <td class="gsc_a_t">
                 <a class="gsc_a_at">Test Publication</a>
@@ -255,14 +254,15 @@ class TestScholarSource:
             <td class="gsc_a_c"></td>
             <td class="gsc_a_y"></td>
         </tr>
-        '''
+        """
 
         from bs4 import BeautifulSoup
-        soup = BeautifulSoup(minimal_html, 'html.parser')
-        row = soup.find('tr', class_='gsc_a_tr')
-        
+
+        soup = BeautifulSoup(minimal_html, "html.parser")
+        row = soup.find("tr", class_="gsc_a_tr")
+
         publication = source._parse_publication_row(row)
-        
+
         assert publication is not None
         assert publication.title == "Test Publication"
         assert publication.year is None
@@ -273,9 +273,9 @@ class TestScholarSource:
     def test_parse_publication_no_title(self):
         """Test parsing publication without title returns None."""
         source = ScholarSource("ABC123")
-        
+
         # Create a publication row without title
-        no_title_html = '''
+        no_title_html = """
         <tr class="gsc_a_tr">
             <td class="gsc_a_t">
                 <div class="gs_gray">Some Author</div>
@@ -283,20 +283,21 @@ class TestScholarSource:
             <td class="gsc_a_c"></td>
             <td class="gsc_a_y"></td>
         </tr>
-        '''
+        """
 
         from bs4 import BeautifulSoup
-        soup = BeautifulSoup(no_title_html, 'html.parser')
-        row = soup.find('tr', class_='gsc_a_tr')
-        
+
+        soup = BeautifulSoup(no_title_html, "html.parser")
+        row = soup.find("tr", class_="gsc_a_tr")
+
         publication = source._parse_publication_row(row)
-        
+
         assert publication is None
 
     def test_parse_authors_from_gray_text(self):
         """Test parsing authors from gray text."""
         source = ScholarSource("ABC123")
-        
+
         # Test various author formats
         test_cases = [
             ("J Smith, A Johnson, B Williams", ["J Smith", "A Johnson", "B Williams"]),
@@ -314,7 +315,7 @@ class TestScholarSource:
     def test_parse_journal_and_year_from_gray_text(self):
         """Test parsing journal and year from publication info."""
         source = ScholarSource("ABC123")
-        
+
         # Test various publication info formats
         test_cases = [
             ("Nature Physics 15 (4), 123-130, 2021", ("Nature Physics", 2021)),
@@ -331,14 +332,14 @@ class TestScholarSource:
             assert journal == expected_journal
             assert year == expected_year
 
-    @patch('time.sleep')
+    @patch("time.sleep")
     def test_rate_limiting_delay(self, mock_sleep):
         """Test that rate limiting delays are implemented."""
         source = ScholarSource("ABC123")
-        
+
         # Call the rate limiting method
         source._apply_rate_limit()
-        
+
         # Verify sleep was called with appropriate delay
         mock_sleep.assert_called_once()
         call_args = mock_sleep.call_args[0][0]
@@ -347,12 +348,12 @@ class TestScholarSource:
     def test_build_url_with_pagination(self):
         """Test URL building with pagination parameters."""
         source = ScholarSource("ABC123")
-        
+
         # Test first page
         url = source._build_url(0)
         expected = "https://scholar.google.com/citations?user=ABC123&hl=en&cstart=0&pagesize=100"
         assert url == expected
-        
+
         # Test subsequent page
         url = source._build_url(100)
         expected = "https://scholar.google.com/citations?user=ABC123&hl=en&cstart=100&pagesize=100"
@@ -361,7 +362,7 @@ class TestScholarSource:
     def test_user_agent_header(self):
         """Test that proper User-Agent header is set."""
         source = ScholarSource("ABC123")
-        
+
         headers = source._get_headers()
         assert "User-Agent" in headers
         assert "Mozilla" in headers["User-Agent"]  # Should look like a real browser
@@ -369,7 +370,7 @@ class TestScholarSource:
     @responses.activate
     def test_parse_publication_with_complex_journal_info(self):
         """Test parsing publication with complex journal information."""
-        complex_html = '''
+        complex_html = """
         <html>
         <body>
             <div id="gs_ccl">
@@ -385,7 +386,7 @@ class TestScholarSource:
             </div>
         </body>
         </html>
-        '''
+        """
 
         responses.add(
             responses.GET,
