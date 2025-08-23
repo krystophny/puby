@@ -7,13 +7,14 @@ module puby
 
     ! Re-export types
     public :: publication_t, zotero_config_t, curl_config_t
-    public :: http_client_t, http_response_t, http_config_t
+    public :: http_client_t, http_response_t, http_config_t, http_headers_t
     public :: curl_handle_t, curl_error_t
 
     ! Re-export HTTP client functionality
     public :: http_client_init, http_client_cleanup
-    public :: http_get, http_post
+    public :: http_get, http_post, http_get_with_options
     public :: http_config_init, http_config_cleanup
+    public :: http_headers_init, http_headers_cleanup, http_headers_add
 
     ! Re-export low-level curl bindings for advanced users
     public :: curl_init, curl_cleanup, curl_perform
