@@ -11,9 +11,9 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
-- [x] #55: dead: remove redundant SourceError class hierarchy (branch: dead-55-redundant-source-error-hierarchy)
 
 ## DONE (Completed)
+- [x] #55: dead: eliminate duplicate Zotero API key URLs and error messages (PR #71)
 - [x] #52: dead: remove duplicate fuzzy matching implementations (PR #70)
 - [x] #53: dead: remove unused private methods in sources module (completed in PR #69)
 - [x] #50: dead: remove legacy ZoteroLibrary class and unused imports (PR #69)
