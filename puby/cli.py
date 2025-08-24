@@ -98,7 +98,7 @@ def _initialize_sources(
     sources: List[PublicationSource] = []
 
     if scholar:
-        if "scholar.google.com" not in scholar:
+        if "scholar.google.com" not in scholar.lower():
             click.echo(f"Error: Invalid Scholar URL: {scholar}", err=True)
             sys.exit(1)
         try:
@@ -108,7 +108,7 @@ def _initialize_sources(
             sys.exit(1)
 
     if orcid:
-        if "orcid.org" not in orcid:
+        if "orcid.org" not in orcid.lower():
             click.echo(f"Error: Invalid ORCID URL: {orcid}", err=True)
             sys.exit(1)
         try:
@@ -118,7 +118,7 @@ def _initialize_sources(
             sys.exit(1)
 
     if pure:
-        if not pure.startswith("https://"):
+        if not pure.lower().startswith("https://"):
             click.echo(f"Error: Pure URL must use HTTPS: {pure}", err=True)
             sys.exit(1)
         try:
@@ -498,7 +498,7 @@ def fetch(orcid: Optional[str], output: str) -> None:
     client = PublicationClient()
     
     # URL validation consistent with check command
-    if "orcid.org" not in orcid:
+    if "orcid.org" not in orcid.lower():
         click.echo(f"Error: Invalid ORCID URL: {orcid}", err=True)
         sys.exit(1)
     
