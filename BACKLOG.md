@@ -1,10 +1,10 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #59: dead: remove unused exception handlers
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
+- [x] #59: dead: remove unused exception handlers (branch: dead-59-unused-exceptions)
 
 ## DONE (Completed)
 - [x] #57: dead: remove unused ORCIDConfig class (PR #76)
