@@ -14,9 +14,9 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
-- [x] #50: dead: remove legacy ZoteroLibrary class and unused imports (branch: dead-50-remove-legacy-zotero)
 
 ## DONE (Completed)
+- [x] #50: dead: remove legacy ZoteroLibrary class and unused imports (PR #69)
 - [x] #65: bug: URL validation is case-sensitive, should accept uppercase domains (PR #68)
 - [x] #64: bug: fetch command doesn't validate output filename before API calls (resolved by PR #67)
 - [x] #63: bug: file permission check happens after expensive API calls (branch: bug-63-file-permission-check-timing)
