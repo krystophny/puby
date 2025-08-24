@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup, Tag
 from .base import PublicationSource
 from .models import Author, Publication
 from .utils import extract_year_from_text
+from .author_utils import parse_comma_separated_authors
 
 
 class ScholarSource(PublicationSource):
@@ -246,15 +247,8 @@ class ScholarSource(PublicationSource):
         return None
 
     def _parse_authors(self, author_text: str) -> List[Author]:
-        """Parse authors from comma-separated text."""
-        authors = []
-        if author_text:
-            # Split by comma and clean up
-            author_names = [name.strip() for name in author_text.split(",")]
-            for name in author_names:
-                if name and not name.lower().startswith(("and", "&")):
-                    authors.append(Author(name=name))
-        return authors
+        """Parse authors from comma-separated text using shared utilities."""
+        return parse_comma_separated_authors(author_text)
 
     def _parse_journal_and_year(
         self, pub_info: str

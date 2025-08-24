@@ -11,6 +11,7 @@ from .base import PublicationSource
 from .bibtex_parser import BibtexParser
 from .constants import ZOTERO_API_KEY_URL, ZOTERO_API_KEY_INVALID_ERROR
 from .models import Author, Publication, ZoteroConfig
+from .author_utils import create_structured_author, create_fallback_author
 
 
 class ZoteroSource(PublicationSource):
@@ -353,25 +354,23 @@ class ZoteroSource(PublicationSource):
         return item_type in publication_types
 
     def _parse_zotero_creators(self, data: Dict[str, Any]) -> List[Author]:
-        """Extract and parse authors from Zotero creators data."""
+        """Extract and parse authors from Zotero creators data using shared utilities."""
         authors = []
         creators = data.get("creators", [])
         for creator in creators:
             if creator.get("creatorType") == "author":
                 first_name = creator.get("firstName", "").strip()
                 last_name = creator.get("lastName", "").strip()
+                
+                # Use shared utility to create structured author
+                author = create_structured_author(
+                    first_name=first_name or None,
+                    last_name=last_name or None
+                )
+                if author:
+                    authors.append(author)
 
-                if last_name or first_name:
-                    full_name = f"{first_name} {last_name}".strip()
-                    authors.append(
-                        Author(
-                            name=full_name,
-                            given_name=first_name or None,
-                            family_name=last_name or None,
-                        )
-                    )
-
-        return authors if authors else [Author(name="[No authors]")]
+        return authors if authors else [create_fallback_author("[No authors]")]
 
     def _parse_publication_year(self, date_str: str) -> Optional[int]:
         """Parse publication year from Zotero date field."""

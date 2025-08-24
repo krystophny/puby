@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 from .base import PublicationSource
 from .models import Author, Publication
 from .utils import extract_year_from_text
+from .author_utils import parse_plain_author_names
 
 
 class PureSource(PublicationSource):
@@ -233,16 +234,16 @@ class PureSource(PublicationSource):
         return None
 
     def _extract_authors_from_container(self, container: BeautifulSoup) -> List[Author]:
-        """Extract authors from publication container."""
-        authors = []
+        """Extract authors from publication container using shared utilities."""
+        author_names = []
 
         # Look for author information - check for individual name spans first
         name_elements = container.select(".persons .name, .persons span.name")
         if name_elements:
             for elem in name_elements:
                 author_text = elem.get_text(strip=True)
-                if author_text and not author_text.lower().startswith(("and", "&")):
-                    authors.append(Author(name=author_text))
+                if author_text:
+                    author_names.append(author_text)
         else:
             # Fall back to broader selectors
             author_selectors = [".authors", '[class*="author"]', ".person-name", ".persons"]
@@ -252,15 +253,14 @@ class PureSource(PublicationSource):
                 for elem in author_elements:
                     author_text = elem.get_text(strip=True)
                     if author_text:
-                        # Simple author name splitting
-                        author_names = [name.strip() for name in author_text.split(",")]
-                        for name in author_names:
-                            if name and not name.lower().startswith(("and", "&")):
-                                authors.append(Author(name=name))
-                if authors:  # Stop if we found authors
+                        # Split comma-separated names and add to list
+                        names = [name.strip() for name in author_text.split(",")]
+                        author_names.extend(names)
+                if author_names:  # Stop if we found authors
                     break
 
-        return authors
+        # Use shared utilities to parse names (handles filtering of separators)
+        return parse_plain_author_names(author_names)
 
     def _extract_publication_details(self, container: BeautifulSoup) -> Dict[str, Any]:
         """Extract publication details like journal, year, etc."""
