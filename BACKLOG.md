@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #62: bug: uncaught exception in Scholar source with empty search results
 - [ ] #63: bug: hardcoded timeout value in HTTP client
 - [ ] #64: bug: missing validation for environment variable values
 - [ ] #65: bug: incomplete error handling in JSON parsing
@@ -19,5 +18,6 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
+- [x] #62: bug: uncaught exception in Scholar source with empty search results (branch: bug-62-scholar-empty-results)
 
 ## DONE (Completed)
