@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #50: dead: remove legacy `fetch_publications` method
 - [ ] #53: dead: remove unused private methods in sources module
 - [ ] #52: dead: remove duplicate fuzzy matching implementations
 - [ ] #55: dead: remove redundant SourceError class hierarchy
@@ -15,6 +14,7 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
+- [x] #50: dead: remove legacy ZoteroLibrary class and unused imports (branch: dead-50-remove-legacy-zotero)
 
 ## DONE (Completed)
 - [x] #65: bug: URL validation is case-sensitive, should accept uppercase domains (PR #68)
