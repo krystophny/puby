@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #58: dead: remove duplicate progress tracking implementations
 - [ ] #60: dead: remove redundant test fixtures
 - [ ] #51: dead: remove unused imports across codebase
 - [ ] #54: dead: remove obsolete configuration constants
@@ -10,6 +9,7 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
+- [x] #58: dead: eliminate duplicate author parsing logic across sources (branch: dead-58-duplicate-author-parsing)
 
 ## DONE (Completed)
 - [x] #56: dead: eliminate duplicate similarity calculation methods (PR #72)

@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from .models import Author, Publication
 from .utils import extract_year_from_bibtex_field
+from .author_utils import parse_bibtex_authors
 
 
 class BibtexParser:
@@ -74,35 +75,11 @@ class BibtexParser:
             return None
 
     def _parse_bibtex_authors(self, entry: str) -> List[Author]:
-        """Parse authors from BibTeX entry."""
+        """Parse authors from BibTeX entry using shared utilities."""
         author_match = re.search(r"author\s*=\s*\{([^}]+)\}", entry, re.IGNORECASE)
         author_str = author_match.group(1) if author_match else ""
-
-        authors = []
-        if author_str:
-            author_parts = author_str.split(" and ")
-            for author_part in author_parts:
-                author_part = author_part.strip()
-                if "," in author_part:
-                    parts = author_part.split(",", 1)
-                    family_name = parts[0].strip()
-                    given_name = parts[1].strip() if len(parts) > 1 else None
-                    full_name = (
-                        f"{given_name} {family_name}".strip()
-                        if given_name
-                        else family_name
-                    )
-                    authors.append(
-                        Author(
-                            name=full_name,
-                            given_name=given_name,
-                            family_name=family_name,
-                        )
-                    )
-                else:
-                    authors.append(Author(name=author_part))
-
-        return authors
+        
+        return parse_bibtex_authors(author_str)
 
     def _extract_bibtex_year(self, entry: str) -> Optional[int]:
         """Extract year from BibTeX entry."""

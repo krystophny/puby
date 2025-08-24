@@ -9,6 +9,7 @@ import requests
 from .base import PublicationSource
 from .models import Author, Publication
 from .utils import safe_int_from_value
+from .author_utils import create_fallback_author, parse_plain_author_names
 
 
 class ORCIDSource(PublicationSource):
@@ -122,19 +123,22 @@ class ORCIDSource(PublicationSource):
         return url.get("value") if url else None
 
     def _extract_authors(self, work: Dict[str, Any]) -> List[Author]:
-        """Extract authors from ORCID work data."""
-        authors = []
+        """Extract authors from ORCID work data using shared utilities."""
+        names = []
         contributors = work.get("contributors", {}).get("contributor", [])
         for contributor in contributors:
             credit_name = contributor.get("credit-name", {})
             if credit_name:
                 name = credit_name.get("value", "")
                 if name:
-                    authors.append(Author(name=name))
+                    names.append(name)
 
-        # If no contributors, add a placeholder
+        # Use shared utilities to parse names
+        authors = parse_plain_author_names(names)
+        
+        # If no contributors, add a placeholder using shared utility
         if not authors:
-            authors = [Author(name="[Authors not available]")]
+            authors = [create_fallback_author("[Authors not available]")]
 
         return authors
 
