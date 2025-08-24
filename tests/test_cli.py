@@ -89,9 +89,9 @@ class TestCLI:
         assert result.exit_code == 0
         assert "0.1.0" in result.output
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroSource")
+    @patch("puby.commands.check.PublicationClient")
+    @patch("puby.commands.check.ORCIDSource")
+    @patch("puby.commands.check.ZoteroSource")
     def test_check_command_integration_success(
         self, mock_zotero_source, mock_orcid_source, mock_client
     ):
@@ -152,9 +152,9 @@ class TestCLI:
         mock_client.assert_called_once_with(verbose=True)
         assert mock_client_instance.fetch_publications.call_count == 2
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroSource")
+    @patch("puby.commands.check.PublicationClient")
+    @patch("puby.commands.check.ORCIDSource")
+    @patch("puby.commands.check.ZoteroSource")
     def test_check_command_with_missing_publications(
         self, mock_zotero_source, mock_orcid_source, mock_client
     ):
@@ -193,9 +193,9 @@ class TestCLI:
         assert result.exit_code == 0
         assert "Missing from Zotero: 1" in result.output
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroSource")
+    @patch("puby.commands.check.PublicationClient")
+    @patch("puby.commands.check.ORCIDSource")
+    @patch("puby.commands.check.ZoteroSource")
     def test_check_command_different_output_formats(
         self, mock_zotero_source, mock_orcid_source, mock_client
     ):
@@ -236,8 +236,8 @@ class TestCLI:
         assert result.exit_code == 0
         assert "Summary:" in result.output  # Summary always shown
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ZoteroSource")
+    @patch("puby.commands.check.PublicationClient")
+    @patch("puby.commands.check.ZoteroSource")
     def test_check_command_source_fetch_error(self, mock_zotero_source, mock_client):
         """Test check command handles source fetch errors gracefully."""
         mock_client_instance = Mock()
@@ -266,7 +266,7 @@ class TestCLI:
 
     def test_check_command_zotero_initialization_error(self):
         """Test check command handles Zotero initialization errors."""
-        with patch("puby.cli.ZoteroSource") as mock_zotero_source:
+        with patch("puby.commands.check.ZoteroSource") as mock_zotero_source:
             mock_zotero_source.side_effect = ValueError("Invalid Zotero configuration")
 
             runner = CliRunner()
@@ -284,10 +284,10 @@ class TestCLI:
             assert result.exit_code == 1
             assert "Error: Invalid Zotero configuration" in result.output
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroSource")
-    @patch("puby.cli.ScholarSource")
+    @patch("puby.commands.check.PublicationClient")
+    @patch("puby.commands.check.ORCIDSource")
+    @patch("puby.commands.check.ZoteroSource")
+    @patch("puby.commands.check.ScholarSource")
     def test_check_command_multiple_sources(
         self, mock_scholar_source, mock_zotero_source, mock_orcid_source, mock_client
     ):
@@ -342,8 +342,8 @@ class TestCLI:
         assert result.exit_code == 1
         assert "--orcid is required" in result.output
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
+    @patch("puby.commands.fetch.PublicationClient")
+    @patch("puby.commands.fetch.ORCIDSource")
     def test_fetch_command_success(self, mock_orcid_source, mock_client):
         """Test successful fetch command."""
         mock_pub = Publication(
@@ -371,8 +371,8 @@ class TestCLI:
         assert "Successfully saved" in result.output
         assert "test.bib" in result.output
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
+    @patch("puby.commands.fetch.PublicationClient")
+    @patch("puby.commands.fetch.ORCIDSource")
     def test_fetch_command_source_error(self, mock_orcid_source, mock_client):
         """Test fetch command handles source errors with clean messages."""
         mock_client_instance = Mock()
@@ -401,8 +401,8 @@ class TestCLI:
         assert "Traceback" not in result.output
         assert "ValueError" not in result.output
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
+    @patch("puby.commands.fetch.PublicationClient")
+    @patch("puby.commands.fetch.ORCIDSource")
     def test_fetch_command_network_error(self, mock_orcid_source, mock_client):
         """Test fetch command handles network errors with clean messages."""
         import requests
@@ -432,8 +432,8 @@ class TestCLI:
         assert "Traceback" not in result.output
         assert "RequestException" not in result.output
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
+    @patch("puby.commands.fetch.PublicationClient")
+    @patch("puby.commands.fetch.ORCIDSource")
     def test_fetch_command_unexpected_error(self, mock_orcid_source, mock_client):
         """Test fetch command handles unexpected errors with clean messages."""
         mock_client_instance = Mock()
@@ -461,8 +461,8 @@ class TestCLI:
         # Should not show raw traceback
         assert "Traceback" not in result.output
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
+    @patch("puby.commands.fetch.PublicationClient")
+    @patch("puby.commands.fetch.ORCIDSource")
     def test_fetch_vs_check_error_consistency(self, mock_orcid_source, mock_client):
         """Test that fetch and check commands show consistent error message formats."""
         runner = CliRunner()
@@ -527,7 +527,7 @@ class TestCLI:
         
         # For check command, we need to ensure it gets to the client fetch stage
         # by providing valid arguments and mocking ZoteroSource properly
-        with patch("puby.cli.ZoteroSource") as mock_zotero:
+        with patch("puby.commands.check.ZoteroSource") as mock_zotero:
             mock_zotero.return_value = Mock()
             # Mock the first call (for ORCID) to return some data,
             # and the second call (for Zotero) to raise the error  
@@ -666,9 +666,9 @@ class TestCLIFilePermissionValidation:
 class TestCLIZoteroSourceIntegration:
     """Test CLI integration with ZoteroSource class."""
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroSource")
+    @patch("puby.commands.check.PublicationClient")
+    @patch("puby.commands.check.ORCIDSource")
+    @patch("puby.commands.check.ZoteroSource")
     def test_check_command_with_zotero_source_group_library(
         self, mock_zotero_source, mock_orcid_source, mock_client
     ):
@@ -717,9 +717,9 @@ class TestCLIZoteroSourceIntegration:
         assert config_arg.group_id == "12345"
         assert config_arg.library_type == "group"
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroSource")
+    @patch("puby.commands.check.PublicationClient")
+    @patch("puby.commands.check.ORCIDSource")
+    @patch("puby.commands.check.ZoteroSource")
     def test_check_command_with_zotero_source_user_library(
         self, mock_zotero_source, mock_orcid_source, mock_client
     ):
@@ -763,9 +763,9 @@ class TestCLIZoteroSourceIntegration:
         assert config_arg.library_type == "user"
         assert config_arg.group_id == "user-id-123"
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroSource")
+    @patch("puby.commands.check.PublicationClient")
+    @patch("puby.commands.check.ORCIDSource")
+    @patch("puby.commands.check.ZoteroSource")
     def test_check_command_zotero_source_auto_user_id_discovery(
         self, mock_zotero_source, mock_orcid_source, mock_client
     ):
@@ -808,7 +808,7 @@ class TestCLIZoteroSourceIntegration:
         assert config_arg.library_type == "user"
         assert config_arg.group_id is None  # Will be auto-discovered
 
-    @patch("puby.cli.ZoteroSource")
+    @patch("puby.commands.check.ZoteroSource")
     def test_check_command_zotero_source_invalid_config(self, mock_zotero_source):
         """Test check command handles invalid ZoteroSource configuration."""
         # Mock ZoteroSource to raise ValueError for invalid config
@@ -834,9 +834,9 @@ class TestCLIZoteroSourceIntegration:
         assert result.exit_code == 1
         assert "Invalid Zotero configuration" in result.output
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroSource")
+    @patch("puby.commands.check.PublicationClient")
+    @patch("puby.commands.check.ORCIDSource")
+    @patch("puby.commands.check.ZoteroSource")
     def test_check_command_zotero_source_authentication_error(
         self, mock_zotero_source, mock_orcid_source, mock_client
     ):
@@ -880,9 +880,9 @@ class TestCLIZoteroSourceIntegration:
         assert result.exit_code == 1
         assert "Zotero API authentication failed" in result.output
 
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroSource")
+    @patch("puby.commands.check.PublicationClient")
+    @patch("puby.commands.check.ORCIDSource")
+    @patch("puby.commands.check.ZoteroSource")
     def test_check_command_zotero_source_backward_compatibility(
         self, mock_zotero_source, mock_orcid_source, mock_client
     ):
@@ -926,10 +926,10 @@ class TestCLIZoteroSourceIntegration:
         config_arg = mock_zotero_source.call_args[0][0]
         assert config_arg.library_type == "group"  # Default for backward compatibility
 
-    @patch("puby.cli._export_missing_publications")
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroSource")
+    @patch("puby.commands.check._export_missing_publications")
+    @patch("puby.commands.check.PublicationClient")
+    @patch("puby.commands.check.ORCIDSource")
+    @patch("puby.commands.check.ZoteroSource")
     def test_check_command_with_export_missing(
         self, mock_zotero_source, mock_orcid_source, mock_client, mock_export
     ):
@@ -974,10 +974,10 @@ class TestCLIZoteroSourceIntegration:
         # Verify export function was called with correct arguments
         mock_export.assert_called_once_with([missing_pub], "missing_pubs.bib")
 
-    @patch("puby.cli._export_missing_publications")
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroSource")
+    @patch("puby.commands.check._export_missing_publications")
+    @patch("puby.commands.check.PublicationClient")
+    @patch("puby.commands.check.ORCIDSource")
+    @patch("puby.commands.check.ZoteroSource")
     def test_check_command_export_missing_default_filename(
         self, mock_zotero_source, mock_orcid_source, mock_client, mock_export
     ):
@@ -1021,10 +1021,10 @@ class TestCLIZoteroSourceIntegration:
         # Should use provided filename
         mock_export.assert_called_once_with([missing_pub], "missing_publications.bib")
 
-    @patch("puby.cli._export_missing_publications")
-    @patch("puby.cli.PublicationClient")
-    @patch("puby.cli.ORCIDSource")
-    @patch("puby.cli.ZoteroSource")
+    @patch("puby.commands.check._export_missing_publications")
+    @patch("puby.commands.check.PublicationClient")
+    @patch("puby.commands.check.ORCIDSource")
+    @patch("puby.commands.check.ZoteroSource")
     def test_check_command_export_missing_no_missing_publications(
         self, mock_zotero_source, mock_orcid_source, mock_client, mock_export
     ):
