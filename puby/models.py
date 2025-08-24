@@ -456,27 +456,6 @@ class ZoteroConfig:
         return all(c.isascii() and c.isalnum() for c in api_key)
 
 
-@dataclass
-class ORCIDConfig:
-    """Configuration for ORCID API access."""
-
-    orcid_id: str
-
-    def is_valid(self) -> bool:
-        """Check if configuration is valid."""
-        return len(self.validation_errors()) == 0
-
-    def validation_errors(self) -> List[str]:
-        """Get list of validation errors."""
-        errors = []
-
-        if not self.orcid_id or not self.orcid_id.strip():
-            errors.append("ORCID ID is required")
-        elif not _is_valid_orcid(self.orcid_id):
-            errors.append("ORCID ID must follow format 0000-0000-0000-0000")
-
-        return errors
-
 
 def _is_valid_orcid(orcid: str) -> bool:
     """Validate ORCID ID format."""

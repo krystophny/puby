@@ -1,6 +1,6 @@
 """Tests for publication models."""
 
-from puby.models import Author, ORCIDConfig, Publication, ZoteroConfig
+from puby.models import Author, Publication, ZoteroConfig
 
 
 class TestAuthor:
@@ -401,34 +401,6 @@ class TestZoteroConfig:
         errors = config.validation_errors()
         assert "Group ID is required for group library type" in errors
 
-
-class TestORCIDConfig:
-    """Test ORCID configuration model."""
-
-    def test_orcid_config_creation(self):
-        """Test creating ORCID configuration."""
-        config = ORCIDConfig(orcid_id="0000-0000-0000-0000")
-        assert config.orcid_id == "0000-0000-0000-0000"
-
-    def test_orcid_config_validation_valid(self):
-        """Test valid ORCID configuration validation."""
-        config = ORCIDConfig(orcid_id="0000-0000-0000-0000")
-        assert config.is_valid()
-        assert len(config.validation_errors()) == 0
-
-    def test_orcid_config_validation_invalid_format(self):
-        """Test invalid ORCID format validation."""
-        config = ORCIDConfig(orcid_id="invalid-id")
-        assert not config.is_valid()
-        errors = config.validation_errors()
-        assert "ORCID ID must follow format 0000-0000-0000-0000" in errors
-
-    def test_orcid_config_validation_empty(self):
-        """Test empty ORCID validation."""
-        config = ORCIDConfig(orcid_id="")
-        assert not config.is_valid()
-        errors = config.validation_errors()
-        assert "ORCID ID is required" in errors
 
 
 class TestPublicationValidation:
