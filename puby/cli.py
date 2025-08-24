@@ -1,6 +1,8 @@
 """Command-line interface for puby."""
 
 import sys
+import os
+from pathlib import Path
 from typing import List, Optional
 
 import click
@@ -22,6 +24,59 @@ from .sources import (
 
 # Initialize colorama for cross-platform colored output
 colorama_init()
+
+
+def _validate_file_writable(filepath: str) -> None:
+    """Validate that a file path can be written to.
+    
+    Args:
+        filepath: Path to validate for writeability
+        
+    Raises:
+        SystemExit: If file cannot be written (prints error and exits)
+    """
+    try:
+        # Convert to Path object for better path handling
+        path = Path(filepath)
+        
+        # Check if parent directory exists and is writable
+        parent_dir = path.parent
+        if not parent_dir.exists():
+            click.echo(
+                f"Error: Directory does not exist: {parent_dir}", err=True
+            )
+            sys.exit(1)
+        
+        if not parent_dir.is_dir():
+            click.echo(
+                f"Error: Parent path is not a directory: {parent_dir}", err=True
+            )
+            sys.exit(1)
+        
+        if not os.access(parent_dir, os.W_OK):
+            click.echo(
+                f"Error: Permission denied - cannot write to directory: {parent_dir}",
+                err=True,
+            )
+            sys.exit(1)
+        
+        # If file exists, check if it can be overwritten
+        if path.exists():
+            if not path.is_file():
+                click.echo(
+                    f"Error: Path exists but is not a file: {filepath}", err=True
+                )
+                sys.exit(1)
+            if not os.access(path, os.W_OK):
+                click.echo(
+                    f"Error: Permission denied - cannot overwrite file: {filepath}",
+                    err=True,
+                )
+                sys.exit(1)
+        
+    except Exception as e:
+        click.echo(f"Error: Cannot validate file path {filepath}: {e}", err=True)
+        sys.exit(1)
 
 
 def _validate_sources(
@@ -381,6 +436,10 @@ def check(
         )
         sys.exit(1)
 
+    # Validate export file writeability before making any API calls
+    if export_missing is not None:
+        _validate_file_writable(export_missing)
+
     # Get API key with proper precedence (CLI > env > .env)
     resolved_api_key = get_api_key(api_key)
 
@@ -432,6 +491,9 @@ def fetch(orcid: Optional[str], output: str) -> None:
     if not orcid:
         click.echo("Error: --orcid is required for fetch command", err=True)
         sys.exit(1)
+
+    # Validate output file writeability before making any API calls
+    _validate_file_writable(output)
 
     client = PublicationClient()
     
