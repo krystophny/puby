@@ -52,6 +52,18 @@ class TestCLI:
         assert result.exit_code == 1
         assert "Invalid ORCID URL" in result.output
 
+    def test_check_invalid_orcid_format(self):
+        """Test check command with ORCID URL that contains orcid.org but has invalid format."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli, ["check", "--orcid", "https://orcid.org/invalid-orcid-format", "--zotero", "12345"]
+        )
+        assert result.exit_code == 1
+        assert "Invalid ORCID URL or ID: https://orcid.org/invalid-orcid-format" in result.output
+        # Should not contain traceback information
+        assert "Traceback" not in result.output
+        assert "ValueError" not in result.output
+
     def test_check_invalid_scholar_url(self):
         """Test check command with invalid Scholar URL."""
         runner = CliRunner()
