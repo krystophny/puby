@@ -10,6 +10,7 @@ from .base import PublicationSource
 from .models import Author, Publication
 from .utils import safe_int_from_value
 from .author_utils import create_fallback_author, parse_plain_author_names
+from .http_utils import get_session_for_url
 
 
 class ORCIDSource(PublicationSource):
@@ -21,6 +22,7 @@ class ORCIDSource(PublicationSource):
         self.orcid_id = self._extract_orcid_id(orcid_url)
         self.logger = logging.getLogger(__name__)
         self.api_base = "https://pub.orcid.org/v3.0"
+        self._session = get_session_for_url(self.api_base)
 
     def _extract_orcid_id(self, url: str) -> str:
         """Extract ORCID ID from URL."""
@@ -43,7 +45,7 @@ class ORCIDSource(PublicationSource):
         headers = {"Accept": "application/json"}
 
         try:
-            response = requests.get(works_url, headers=headers)
+            response = self._session.get(works_url, headers=headers)
             response.raise_for_status()
             data = response.json()
 
@@ -76,7 +78,7 @@ class ORCIDSource(PublicationSource):
         headers = {"Accept": "application/json"}
 
         try:
-            response = requests.get(url, headers=headers)
+            response = self._session.get(url, headers=headers)
             response.raise_for_status()
             data = response.json()
             return data if isinstance(data, dict) else None

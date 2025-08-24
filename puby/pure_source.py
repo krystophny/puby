@@ -14,7 +14,7 @@ from .base import PublicationSource
 from .models import Author, Publication
 from .utils import extract_year_from_text
 from .author_utils import parse_plain_author_names
-from .http_utils import get_default_headers
+from .http_utils import get_default_headers, get_session_for_url
 
 
 class PureSource(PublicationSource):
@@ -34,6 +34,7 @@ class PureSource(PublicationSource):
         # Extract components
         self.base_domain = self._extract_base_domain()
         self.person_id = self._extract_person_id()
+        self._session = get_session_for_url(self.base_domain)
 
         self.logger.info(f"Initialized Pure source for {self.base_domain}")
 
@@ -72,7 +73,7 @@ class PureSource(PublicationSource):
         try:
             api_url = self._build_api_url()
             self.logger.info(f"Trying Pure API: {api_url}")
-            response = requests.get(api_url, headers=self._get_headers())
+            response = self._session.get(api_url, headers=self._get_headers())
 
             if response.status_code == 200:
                 data = response.json()
@@ -94,7 +95,7 @@ class PureSource(PublicationSource):
             while current_url and page_count < max_pages:
                 self.logger.info(f"Fetching Pure page {page_count + 1}: {current_url}")
 
-                response = requests.get(current_url, headers=self._get_headers())
+                response = self._session.get(current_url, headers=self._get_headers())
                 response.raise_for_status()
 
                 soup = BeautifulSoup(response.text, "html.parser")

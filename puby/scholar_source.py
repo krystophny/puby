@@ -13,7 +13,7 @@ from .base import PublicationSource
 from .models import Author, Publication
 from .utils import extract_year_from_text
 from .author_utils import parse_comma_separated_authors
-from .http_utils import get_headers_with_random_user_agent
+from .http_utils import get_headers_with_random_user_agent, get_session_for_url
 
 
 class ScholarSource(PublicationSource):
@@ -24,6 +24,7 @@ class ScholarSource(PublicationSource):
         self.url = scholar_url.strip()
         self.logger = logging.getLogger(__name__)
         self.user_id = self._extract_scholar_id(self.url)
+        self._session = get_session_for_url("https://scholar.google.com")
         self.logger.info(f"Initialized Scholar source for user {self.user_id}")
 
     def _extract_scholar_id(self, url: str) -> str:
@@ -71,7 +72,7 @@ class ScholarSource(PublicationSource):
                 url = self._build_url(start)
                 self.logger.info(f"Fetching Scholar profile page: {url}")
 
-                response = requests.get(url, headers=self._get_headers())
+                response = self._session.get(url, headers=self._get_headers())
                 response.raise_for_status()
 
                 soup = BeautifulSoup(response.text, "html.parser")
