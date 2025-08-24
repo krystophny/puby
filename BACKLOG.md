@@ -9,9 +9,9 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
-- [x] #58: dead: eliminate duplicate author parsing logic across sources (branch: dead-58-duplicate-author-parsing)
 
 ## DONE (Completed)
+- [x] #58: dead: eliminate duplicate author parsing logic across sources (PR #73)
 - [x] #56: dead: eliminate duplicate similarity calculation methods (PR #72)
 - [x] #55: dead: eliminate duplicate Zotero API key URLs and error messages (PR #71)
 - [x] #52: dead: remove duplicate fuzzy matching implementations (PR #70)
