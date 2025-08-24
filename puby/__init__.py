@@ -3,7 +3,7 @@
 __version__ = "0.1.0"
 
 from .client import PublicationClient
-from .env import get_api_key, load_api_keys
+from .env import get_api_key
 from .matcher import PublicationMatcher
 from .models import Author, Publication
 from .sources import ORCIDSource, PureSource, ScholarSource
@@ -17,5 +17,4 @@ __all__ = [
     "PureSource",
     "ScholarSource",
     "get_api_key",
-    "load_api_keys",
 ]
