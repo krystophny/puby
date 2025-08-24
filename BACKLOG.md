@@ -1,12 +1,12 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #54: dead: remove obsolete configuration constants
 - [ ] #57: dead: remove commented code blocks
 - [ ] #59: dead: remove unused exception handlers
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
+- [x] #54: dead: remove unused load_api_keys export in __init__.py (branch: dead-54-unused-load-api-keys-export)
 
 ## DONE (Completed)
 - [x] #51: dead: remove unused _initialize_zotero function in cli.py (already resolved in previous cleanup)
