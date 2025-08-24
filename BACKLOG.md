@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #56: dead: remove duplicate author parsing functions
 - [ ] #58: dead: remove duplicate progress tracking implementations
 - [ ] #60: dead: remove redundant test fixtures
 - [ ] #51: dead: remove unused imports across codebase
@@ -11,6 +10,7 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
+- [x] #56: dead: remove duplicate author parsing functions (branch: dead-56-duplicate-similarity-calculations)
 
 ## DONE (Completed)
 - [x] #55: dead: eliminate duplicate Zotero API key URLs and error messages (PR #71)
