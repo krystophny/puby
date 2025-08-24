@@ -14,6 +14,7 @@ from .base import PublicationSource
 from .models import Author, Publication
 from .utils import extract_year_from_text
 from .author_utils import parse_plain_author_names
+from .http_utils import get_default_headers
 
 
 class PureSource(PublicationSource):
@@ -55,17 +56,7 @@ class PureSource(PublicationSource):
 
     def _get_headers(self) -> Dict[str, str]:
         """Get headers with proper User-Agent."""
-        return {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-            ),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-        }
+        return get_default_headers()
 
     def _apply_rate_limit(self) -> None:
         """Apply delay to avoid overwhelming Pure portals."""

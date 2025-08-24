@@ -13,6 +13,7 @@ from .base import PublicationSource
 from .models import Author, Publication
 from .utils import extract_year_from_text
 from .author_utils import parse_comma_separated_authors
+from .http_utils import get_headers_with_random_user_agent
 
 
 class ScholarSource(PublicationSource):
@@ -52,20 +53,7 @@ class ScholarSource(PublicationSource):
 
     def _get_headers(self) -> Dict[str, str]:
         """Get headers with proper User-Agent."""
-        user_agents = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        ]
-
-        return {
-            "User-Agent": random.choice(user_agents),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-        }
+        return get_headers_with_random_user_agent()
 
     def _apply_rate_limit(self) -> None:
         """Apply random delay to avoid being blocked."""
