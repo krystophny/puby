@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup, Tag
 
 from .base import PublicationSource
 from .models import Author, Publication
+from .utils import extract_year_from_text
 
 
 class ScholarSource(PublicationSource):
@@ -241,13 +242,7 @@ class ScholarSource(PublicationSource):
         year_cell = row.find("span", {"class": "gsc_a_h"})
         if year_cell:
             year_text = year_cell.get_text(strip=True)
-            # Extract 4-digit year
-            year_match = re.search(r"\b(19|20)\d{2}\b", year_text)
-            if year_match:
-                try:
-                    return int(year_match.group())
-                except ValueError:
-                    pass
+            return extract_year_from_text(year_text)
         return None
 
     def _parse_authors(self, author_text: str) -> List[Author]:
