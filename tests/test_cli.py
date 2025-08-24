@@ -565,6 +565,103 @@ class TestCLI:
         assert "Traceback" not in check_result2.output
 
 
+class TestCLIFilePermissionValidation:
+    """Test early file permission validation before API calls."""
+
+    def test_check_command_unwritable_export_file_early_validation(self):
+        """Test that --export-missing validates file writeability before making API calls."""
+        runner = CliRunner()
+        
+        # Use a path that definitely doesn't exist and can't be written
+        invalid_path = "/nonexistent_directory/test.bib"
+        
+        # The command should fail with file permission error before making any API calls
+        # This means it should fail fast without expensive operations
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000",
+                "--zotero",
+                "12345",
+                "--api-key",
+                "abcdef1234567890abcdef12",
+                "--export-missing",
+                invalid_path,
+            ],
+        )
+
+        assert result.exit_code == 1
+        # Should show clear error about file permission/directory
+        assert (
+            "Directory does not exist" in result.output 
+            or "Permission denied" in result.output 
+            or "No such file or directory" in result.output
+        )
+        # Should NOT show messages about fetching publications (API calls shouldn't happen)
+        assert "Fetching publications from sources" not in result.output
+        assert "Fetching from" not in result.output
+
+    def test_fetch_command_unwritable_output_file_early_validation(self):
+        """Test that fetch command validates file writeability before making API calls."""
+        runner = CliRunner()
+        
+        # Use a path that definitely doesn't exist and can't be written
+        invalid_path = "/nonexistent_directory/test.bib"
+        
+        # The command should fail with file permission error before making any API calls
+        result = runner.invoke(
+            cli,
+            [
+                "fetch",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000",
+                "--output",
+                invalid_path,
+            ],
+        )
+
+        assert result.exit_code == 1
+        # Should show clear error about file permission/directory
+        assert (
+            "Directory does not exist" in result.output 
+            or "Permission denied" in result.output 
+            or "No such file or directory" in result.output
+        )
+        # Should NOT show messages about fetching publications (API calls shouldn't happen)
+        assert "Fetching publications from ORCID" not in result.output
+        assert "Found" not in result.output
+
+    def test_file_permission_validation_allows_valid_paths(self):
+        """Test that valid, writable paths pass file permission validation."""
+        runner = CliRunner()
+        
+        # Create a temporary directory that we can write to
+        with runner.isolated_filesystem():
+            # This path should be valid and writable
+            valid_path = "valid_output.bib"
+            
+            # This should pass file validation but fail at API call stage
+            # (which is what we want - file validation passes, API calls happen)
+            result = runner.invoke(
+                cli,
+                [
+                    "fetch",
+                    "--orcid",
+                    "https://orcid.org/0000-0000-0000-0000",
+                    "--output",
+                    valid_path,
+                ],
+            )
+
+            # Should get past file validation and attempt to fetch
+            assert "Fetching publications from ORCID" in result.output
+            # Should not show file permission errors
+            assert "Directory does not exist" not in result.output
+            assert "Permission denied" not in result.output
+
+
 class TestCLIZoteroSourceIntegration:
     """Test CLI integration with ZoteroSource class."""
 
