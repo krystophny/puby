@@ -15,9 +15,9 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
-- [x] #65: bug: URL validation is case-sensitive, should accept uppercase domains (branch: bug-65-case-insensitive-urls)
 
 ## DONE (Completed)
+- [x] #65: bug: URL validation is case-sensitive, should accept uppercase domains (PR #68)
 - [x] #64: bug: fetch command doesn't validate output filename before API calls (resolved by PR #67)
 - [x] #63: bug: file permission check happens after expensive API calls (branch: bug-63-file-permission-check-timing)
 - [x] #62: bug: uncaught exception in Scholar source with empty search results (branch: bug-62-scholar-empty-results)
