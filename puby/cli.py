@@ -9,6 +9,7 @@ import click
 from colorama import init as colorama_init
 
 from .client import PublicationClient
+from .constants import ZOTERO_API_KEY_URL
 from .env import get_api_key
 from .matcher import PublicationMatcher
 from .models import Publication, ZoteroConfig
@@ -152,7 +153,7 @@ def _initialize_zotero_source(
         click.echo(f"Error: {e}", err=True)
         click.echo("\nTo fix this issue:", err=True)
         click.echo(
-            "1. Get your Zotero API key from: https://www.zotero.org/settings/keys",
+            f"1. Get your Zotero API key from: {ZOTERO_API_KEY_URL}",
             err=True,
         )
         if library_type == "user":
@@ -219,7 +220,7 @@ def _fetch_zotero_publications(
             click.echo(f"Error: {e}", err=True)
             click.echo("\nTo fix this issue:", err=True)
             click.echo(
-                "1. Get your Zotero API key from: https://www.zotero.org/settings/keys",
+                f"1. Get your Zotero API key from: {ZOTERO_API_KEY_URL}",
                 err=True,
             )
             click.echo("2. Run the command again with --api-key YOUR_KEY", err=True)

@@ -7,6 +7,11 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Dict, List, Optional
 
+from .constants import (
+    ZOTERO_API_KEY_REQUIRED_ERROR,
+    ZOTERO_API_KEY_INVALID_FORMAT_ERROR,
+)
+
 
 @dataclass
 class Author:
@@ -467,16 +472,9 @@ class ZoteroConfig:
         errors = []
 
         if self.api_key is None or not self.api_key or not self.api_key.strip():
-            errors.append(
-                "API key is required for Zotero access. "
-                "Get your API key at: https://www.zotero.org/settings/keys"
-            )
+            errors.append(ZOTERO_API_KEY_REQUIRED_ERROR)
         elif not self._is_valid_api_key_format(self.api_key):
-            errors.append(
-                "Invalid API key format. Zotero API keys must be exactly 24 "
-                "alphanumeric characters (letters and numbers only). "
-                "Get your API key at: https://www.zotero.org/settings/keys"
-            )
+            errors.append(ZOTERO_API_KEY_INVALID_FORMAT_ERROR)
 
         if self.library_type not in ("user", "group"):
             errors.append("Library type must be 'user' or 'group'")

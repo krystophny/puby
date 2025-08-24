@@ -9,6 +9,7 @@ from pyzotero import zotero  # type: ignore
 
 from .base import PublicationSource
 from .bibtex_parser import BibtexParser
+from .constants import ZOTERO_API_KEY_URL, ZOTERO_API_KEY_INVALID_ERROR
 from .models import Author, Publication, ZoteroConfig
 
 
@@ -55,7 +56,7 @@ class ZoteroSource(PublicationSource):
                 raise ValueError(
                     f"Failed to initialize Zotero client: {e}. "
                     f"Please ensure you have a valid API key. "
-                    f"Get your API key at: https://www.zotero.org/settings/keys"
+                    f"Get your API key at: {ZOTERO_API_KEY_URL}"
                 ) from e
             else:
                 raise ValueError(f"Failed to initialize Zotero client: {e}") from e
@@ -79,7 +80,7 @@ class ZoteroSource(PublicationSource):
             ):
                 raise ValueError(
                     "Zotero authentication failed: Invalid API key or insufficient permissions. "
-                    "Please check your API key at: https://www.zotero.org/settings/keys"
+                    f"Please check your API key at: {ZOTERO_API_KEY_URL}"
                 ) from e
             elif any(term in error_msg for term in ["404", "not found"]):
                 raise ValueError(
@@ -121,7 +122,7 @@ class ZoteroSource(PublicationSource):
             if hasattr(e, "response") and e.response and e.response.status_code == 403:
                 raise ValueError(
                     "Failed to auto-discover user ID: Invalid API key. "
-                    "Please verify your API key at: https://www.zotero.org/settings/keys"
+                    f"Please verify your API key at: {ZOTERO_API_KEY_URL}"
                 ) from e
             else:
                 status_code = (
@@ -197,11 +198,11 @@ class ZoteroSource(PublicationSource):
                 self.logger.error(
                     f"Zotero authentication failed: {e}. "
                     f"Please check your API key is valid. "
-                    f"Get your API key at: https://www.zotero.org/settings/keys"
+                    f"Get your API key at: {ZOTERO_API_KEY_URL}"
                 )
                 raise ValueError(
                     "Zotero API authentication failed. Please provide a valid API key. "
-                    "Get your API key at: https://www.zotero.org/settings/keys"
+                    f"Get your API key at: {ZOTERO_API_KEY_URL}"
                 ) from e
             elif any(
                 term in error_msg
@@ -297,7 +298,7 @@ class ZoteroSource(PublicationSource):
         if response.status_code == 403:
             raise ValueError(
                 "Zotero My Publications authentication failed: Invalid API key. "
-                "Please check your API key at: https://www.zotero.org/settings/keys"
+                f"Please check your API key at: {ZOTERO_API_KEY_URL}"
             )
         elif response.status_code == 404:
             raise ValueError("My Publications endpoint not found")
@@ -331,7 +332,7 @@ class ZoteroSource(PublicationSource):
             if "403" in error_msg or "forbidden" in error_msg:
                 raise ValueError(
                     "Zotero My Publications authentication failed: Invalid API key. "
-                    "Please check your API key at: https://www.zotero.org/settings/keys"
+                    f"Please check your API key at: {ZOTERO_API_KEY_URL}"
                 ) from error
             else:
                 raise ValueError(f"Failed to fetch My Publications: {error}") from error
