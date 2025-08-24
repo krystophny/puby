@@ -46,19 +46,31 @@ def _initialize_sources(
         if "scholar.google.com" not in scholar:
             click.echo(f"Error: Invalid Scholar URL: {scholar}", err=True)
             sys.exit(1)
-        sources.append(ScholarSource(scholar))
+        try:
+            sources.append(ScholarSource(scholar))
+        except ValueError as e:
+            click.echo(f"Error: {e}", err=True)
+            sys.exit(1)
 
     if orcid:
         if "orcid.org" not in orcid:
             click.echo(f"Error: Invalid ORCID URL: {orcid}", err=True)
             sys.exit(1)
-        sources.append(ORCIDSource(orcid))
+        try:
+            sources.append(ORCIDSource(orcid))
+        except ValueError as e:
+            click.echo(f"Error: {e}", err=True)
+            sys.exit(1)
 
     if pure:
         if not pure.startswith("https://"):
             click.echo(f"Error: Pure URL must use HTTPS: {pure}", err=True)
             sys.exit(1)
-        sources.append(PureSource(pure))
+        try:
+            sources.append(PureSource(pure))
+        except ValueError as e:
+            click.echo(f"Error: {e}", err=True)
+            sys.exit(1)
 
     return sources
 
