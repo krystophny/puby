@@ -8,9 +8,9 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
-- [x] #60: code duplication: User-Agent header construction repeated in multiple sources (branch: dead-60-user-agent-duplication)
 
 ## DONE (Completed)
+- [x] #60: code duplication: User-Agent header construction repeated in multiple sources (PR #74)
 - [x] #58: dead: eliminate duplicate author parsing logic across sources (PR #73)
 - [x] #56: dead: eliminate duplicate similarity calculation methods (PR #72)
 - [x] #55: dead: eliminate duplicate Zotero API key URLs and error messages (PR #71)
