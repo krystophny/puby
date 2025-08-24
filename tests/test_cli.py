@@ -1064,3 +1064,122 @@ class TestCLIZoteroSourceIntegration:
 
         # Should still call export with empty list
         mock_export.assert_called_once_with([], "no_missing.bib")
+
+
+class TestCLICaseInsensitiveURLValidation:
+    """Test case-insensitive URL validation for domains."""
+
+    def test_check_command_accepts_uppercase_orcid_url(self):
+        """Test that check command accepts ORCID URLs with uppercase domains."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid",
+                "HTTPS://ORCID.ORG/0000-0000-0000-0000",
+                "--zotero-library-type",
+                "user",
+            ],
+        )
+
+        # Should not show URL validation error
+        assert "Invalid ORCID URL" not in result.output
+        # Should proceed to fetch (which will fail due to missing API key, but URL validation passed)
+        assert "Fetching publications from sources" in result.output
+
+    def test_check_command_accepts_mixed_case_orcid_url(self):
+        """Test that check command accepts ORCID URLs with mixed case domains."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid",
+                "https://ORCID.org/0000-0000-0000-0000",
+                "--zotero-library-type",
+                "user",
+            ],
+        )
+
+        # Should not show URL validation error
+        assert "Invalid ORCID URL" not in result.output
+        # Should proceed to fetch
+        assert "Fetching publications from sources" in result.output
+
+    def test_check_command_accepts_uppercase_scholar_url(self):
+        """Test that check command accepts Scholar URLs with uppercase domains."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--scholar",
+                "HTTPS://SCHOLAR.GOOGLE.COM/citations?user=test",
+                "--zotero-library-type",
+                "user",
+            ],
+        )
+
+        # Should not show URL validation error
+        assert "Invalid Scholar URL" not in result.output
+        # Should proceed to fetch
+        assert "Fetching publications from sources" in result.output
+
+    def test_check_command_accepts_uppercase_pure_url(self):
+        """Test that check command accepts Pure URLs with uppercase HTTPS."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--pure",
+                "HTTPS://research.example.edu/person/john-doe",
+                "--zotero-library-type",
+                "user",
+            ],
+        )
+
+        # Should not show URL validation error
+        assert "Pure URL must use HTTPS" not in result.output
+        # Should proceed to fetch
+        assert "Fetching publications from sources" in result.output
+
+    def test_fetch_command_accepts_uppercase_orcid_url(self):
+        """Test that fetch command accepts ORCID URLs with uppercase domains."""
+        runner = CliRunner()
+        
+        with runner.isolated_filesystem():
+            result = runner.invoke(
+                cli,
+                [
+                    "fetch",
+                    "--orcid",
+                    "HTTPS://ORCID.ORG/0000-0000-0000-0000",
+                    "--output",
+                    "test.bib",
+                ],
+            )
+
+            # Should not show URL validation error
+            assert "Invalid ORCID URL" not in result.output
+            # Should proceed to fetch (shows fetching message)
+            assert "Fetching publications from ORCID" in result.output
+
+    def test_uppercase_urls_still_work_with_underlying_sources(self):
+        """Test that uppercase URLs work with underlying source classes."""
+        # The underlying source classes should handle the URLs correctly
+        # even when they come from uppercase input (they normalize internally)
+        
+        # Test that the CLI validation doesn't interfere with source behavior
+        from puby.sources import ORCIDSource
+        
+        # This should work - the ORCIDSource class itself handles URL normalization
+        uppercase_url = "HTTPS://ORCID.ORG/0000-0000-0000-0000"
+        
+        # The source should be created successfully (validation happens at CLI level now)
+        source = ORCIDSource(uppercase_url)
+        assert source.orcid_id == "0000-0000-0000-0000"
+        
+        # The original URL is preserved for display but normalized for processing
+        assert "orcid.org" in source.url.lower()
