@@ -6,7 +6,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from puby.cli import _export_missing_publications
+from puby.commands.check import _export_missing_publications
 from puby.models import Author, Publication
 
 
