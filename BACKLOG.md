@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #64: bug: fetch command doesn't validate output filename before API calls
 - [ ] #65: bug: URL validation is case-sensitive, should accept uppercase domains
 - [ ] #50: dead: remove legacy `fetch_publications` method
 - [ ] #53: dead: remove unused private methods in sources module
@@ -19,5 +18,6 @@
 ## DOING (Current Work)
 
 ## DONE (Completed)
+- [x] #64: bug: fetch command doesn't validate output filename before API calls (resolved by PR #67)
 - [x] #63: bug: file permission check happens after expensive API calls (branch: bug-63-file-permission-check-timing)
 - [x] #62: bug: uncaught exception in Scholar source with empty search results (branch: bug-62-scholar-empty-results)
