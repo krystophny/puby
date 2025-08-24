@@ -1,30 +1,23 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
+- [ ] #62: bug: uncaught exception in Scholar source with empty search results
+- [ ] #63: bug: hardcoded timeout value in HTTP client
+- [ ] #64: bug: missing validation for environment variable values
+- [ ] #65: bug: incomplete error handling in JSON parsing
+- [ ] #50: dead: remove legacy `fetch_publications` method
+- [ ] #53: dead: remove unused private methods in sources module
+- [ ] #52: dead: remove duplicate fuzzy matching implementations
+- [ ] #55: dead: remove redundant SourceError class hierarchy
+- [ ] #56: dead: remove duplicate author parsing functions
+- [ ] #58: dead: remove duplicate progress tracking implementations
+- [ ] #60: dead: remove redundant test fixtures
+- [ ] #51: dead: remove unused imports across codebase
+- [ ] #54: dead: remove obsolete configuration constants
+- [ ] #57: dead: remove commented code blocks
+- [ ] #59: dead: remove unused exception handlers
+- [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
 
 ## DONE (Completed)
-- [x] #27: consider: extract common HTTP utilities (closed - analysis complete)
-- [x] #25: refactor: sources.py exceeds size limit (PR #49)
-- [x] #23: fix: test suite regression - message mismatch (PR #48)
-- [x] #21: fix: inconsistent error handling between fetch and check commands (PR #47)
-- [x] #33: feat: add BibTeX export for missing publications (PR #46)
-- [x] #32: feat: add fuzzy title matching with configurable threshold (PR #45)
-- [x] #31: feat: add standardized citation key generation (PR #44)
-- [x] #42: fix: test suite failures after PR #41 source refactoring (PR #43)
-- [x] #29: feat: add Zotero My Publications endpoint support (PR #41)
-- [x] #26: fix: ZoteroSource class not integrated into CLI (PR #40)
-- [x] #24: fix: no API key validation (PR #39)
-- [x] #22: fix: Zotero connection validation missing (PR #38)
-- [x] #28: feat: add Zotero user ID auto-discovery from API key (PR #37)
-- [x] #30: feat: add .env file support for API keys (PR #36)
-- [x] #34: bug: be honest about missing API keys - never fake functionality (PR #35)
-- [x] #10: feat: add Pure research portal support (PR #20 merged)
-- [x] #9: feat: add Google Scholar profile parsing support (PR #19)
-- [x] #8: feat: integrate CLI with all components for MVP workflow (PR #18)
-- [x] #7: feat: implement report generation and output formatting (PR #17)
-- [x] #6: feat: implement publication matching and comparison (PR #16)
-- [x] #5: feat: implement basic Zotero API client (PR #15)
-- [x] #4: feat: implement ORCID API parser (PR #14)
-- [x] #3: feat: implement core publication data types
