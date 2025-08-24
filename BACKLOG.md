@@ -6,9 +6,9 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
-- [x] #54: dead: remove unused load_api_keys export in __init__.py (branch: dead-54-unused-load-api-keys-export)
 
 ## DONE (Completed)
+- [x] #54: dead: remove unused load_api_keys export in __init__.py (PR #75)
 - [x] #51: dead: remove unused _initialize_zotero function in cli.py (already resolved in previous cleanup)
 - [x] #60: code duplication: User-Agent header construction repeated in multiple sources (PR #74)
 - [x] #58: dead: eliminate duplicate author parsing logic across sources (PR #73)
