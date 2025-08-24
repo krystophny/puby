@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #52: dead: remove duplicate fuzzy matching implementations
 - [ ] #55: dead: remove redundant SourceError class hierarchy
 - [ ] #56: dead: remove duplicate author parsing functions
 - [ ] #58: dead: remove duplicate progress tracking implementations
@@ -13,6 +12,7 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
+- [x] #52: dead: remove duplicate fuzzy matching implementations (branch: dead-52-duplicate-year-extraction)
 
 ## DONE (Completed)
 - [x] #53: dead: remove unused private methods in sources module (completed in PR #69)
