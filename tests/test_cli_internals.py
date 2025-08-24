@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from puby.cli import (
+from puby.commands.check import (
     _analyze_publications,
     _export_missing_publications,
     _fetch_source_publications,
@@ -15,8 +15,10 @@ from puby.cli import (
     _initialize_zotero_source,
     _print_summary,
     _report_results,
-    _validate_file_writable,
-    _validate_sources,
+)
+from puby.commands.utils import (
+    validate_file_writable,
+    validate_sources,
 )
 from puby.models import Author, Publication
 
@@ -28,14 +30,14 @@ class TestCLIInternalFunctions:
         """Test file validation with valid writable path."""
         test_file = tmp_path / "test.bib"
         # Should not raise exception for valid path
-        _validate_file_writable(str(test_file))
+        validate_file_writable(str(test_file))
 
     def test_validate_file_writable_nonexistent_directory(self, tmp_path):
         """Test file validation with nonexistent parent directory."""
         test_file = tmp_path / "nonexistent" / "test.bib"
 
         with patch("sys.exit") as mock_exit, patch("click.echo") as mock_echo:
-            _validate_file_writable(str(test_file))
+            validate_file_writable(str(test_file))
             assert mock_exit.called
             # The function may show either "Directory does not exist" or "Permission denied"
             # depending on how the OS handles the nonexistent parent directory
@@ -53,7 +55,7 @@ class TestCLIInternalFunctions:
         test_file = parent_file / "test.bib"
 
         with patch("sys.exit") as mock_exit, patch("click.echo") as mock_echo:
-            _validate_file_writable(str(test_file))
+            validate_file_writable(str(test_file))
             mock_exit.assert_called_once_with(1)
             mock_echo.assert_called_with(
                 f"Error: Parent path is not a directory: {parent_file}", err=True
@@ -69,7 +71,7 @@ class TestCLIInternalFunctions:
             patch("click.echo") as mock_echo,
         ):
             mock_access.return_value = False  # No write permission
-            _validate_file_writable(str(test_file))
+            validate_file_writable(str(test_file))
             mock_exit.assert_called_once_with(1)
             assert "Permission denied - cannot write to directory" in str(
                 mock_echo.call_args
@@ -89,7 +91,7 @@ class TestCLIInternalFunctions:
             mock_access.side_effect = lambda path, mode: (
                 mode != os.W_OK if str(path).endswith("test.bib") else True
             )
-            _validate_file_writable(str(test_file))
+            validate_file_writable(str(test_file))
             mock_exit.assert_called_once_with(1)
             assert "Permission denied - cannot overwrite file" in str(
                 mock_echo.call_args
@@ -101,7 +103,7 @@ class TestCLIInternalFunctions:
         test_dir.mkdir()
 
         with patch("sys.exit") as mock_exit, patch("click.echo") as mock_echo:
-            _validate_file_writable(str(test_dir))
+            validate_file_writable(str(test_dir))
             mock_exit.assert_called_once_with(1)
             mock_echo.assert_called_with(
                 f"Error: Path exists but is not a file: {test_dir}", err=True
@@ -118,14 +120,14 @@ class TestCLIInternalFunctions:
             patch("click.echo") as mock_echo,
         ):
             mock_access.side_effect = Exception("System error")
-            _validate_file_writable(str(test_file))
+            validate_file_writable(str(test_file))
             assert mock_exit.called
             assert "Cannot validate file path" in str(mock_echo.call_args)
 
     def test_validate_sources_all_none(self):
         """Test source validation when no sources provided."""
         with patch("sys.exit") as mock_exit, patch("click.echo") as mock_echo:
-            _validate_sources(None, None, None)
+            validate_sources(None, None, None)
             mock_exit.assert_called_once_with(1)
             mock_echo.assert_called_with(
                 "Error: At least one source URL (--scholar, --orcid, or --pure) is required.",
@@ -135,17 +137,17 @@ class TestCLIInternalFunctions:
     def test_validate_sources_with_scholar(self):
         """Test source validation with scholar URL provided."""
         # Should not raise or exit - valid configuration
-        _validate_sources("https://scholar.google.com/citations?user=test", None, None)
+        validate_sources("https://scholar.google.com/citations?user=test", None, None)
 
     def test_validate_sources_with_orcid(self):
         """Test source validation with ORCID URL provided."""
         # Should not raise or exit - valid configuration
-        _validate_sources(None, "https://orcid.org/0000-0000-0000-0000", None)
+        validate_sources(None, "https://orcid.org/0000-0000-0000-0000", None)
 
     def test_validate_sources_with_pure(self):
         """Test source validation with Pure URL provided."""
         # Should not raise or exit - valid configuration
-        _validate_sources(None, None, "https://pure.example.com/profile")
+        validate_sources(None, None, "https://pure.example.com/profile")
 
     @patch("puby.cli.ScholarSource")
     def test_initialize_sources_scholar_invalid_url(self, mock_scholar_source):
