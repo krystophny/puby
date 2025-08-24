@@ -477,10 +477,10 @@ def check(
     default="publications.bib",
 )
 def fetch(orcid: Optional[str], output: str) -> None:
-    """Fetch publications from a source and save to file."""
+    """Fetch publications from ORCID and save to BibTeX file."""
 
     if not orcid:
-        click.echo("Error: --orcid is required for fetch command", err=True)
+        click.echo("Error: --orcid is required", err=True)
         sys.exit(1)
 
     # Validate output file writeability before making any API calls
