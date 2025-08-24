@@ -1,11 +1,11 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #57: dead: remove commented code blocks
 - [ ] #59: dead: remove unused exception handlers
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
+- [x] #57: dead: remove unused ORCIDConfig class (branch: dead-57-orcidconfig-removal)
 
 ## DONE (Completed)
 - [x] #54: dead: remove unused load_api_keys export in __init__.py (PR #75)
