@@ -1,12 +1,12 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
-- [x] #59: dead: remove unused exception handlers (branch: dead-59-unused-exceptions)
+- [x] #61: meta: dead code removal summary and verification (branch: meta-61-dead-code-summary)
 
 ## DONE (Completed)
+- [x] #59: fix fetch command misleading documentation (PR #77)
 - [x] #57: dead: remove unused ORCIDConfig class (PR #76)
 - [x] #54: dead: remove unused load_api_keys export in __init__.py (PR #75)
 - [x] #51: dead: remove unused _initialize_zotero function in cli.py (already resolved in previous cleanup)
