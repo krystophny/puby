@@ -8,6 +8,7 @@ import requests
 
 from .base import PublicationSource
 from .models import Author, Publication
+from .utils import safe_int_from_value
 
 
 class ORCIDSource(PublicationSource):
@@ -95,8 +96,7 @@ class ORCIDSource(PublicationSource):
             year_data = pub_date.get("year", {})
             if year_data:
                 year = year_data.get("value")
-                if year:
-                    return int(year)
+                return safe_int_from_value(year)
         return None
 
     def _extract_journal(self, work: Dict[str, Any]) -> Optional[str]:

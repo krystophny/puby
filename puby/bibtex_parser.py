@@ -4,6 +4,7 @@ import re
 from typing import List, Optional
 
 from .models import Author, Publication
+from .utils import extract_year_from_bibtex_field
 
 
 class BibtexParser:
@@ -105,15 +106,7 @@ class BibtexParser:
 
     def _extract_bibtex_year(self, entry: str) -> Optional[int]:
         """Extract year from BibTeX entry."""
-        year_match = re.search(r"year\s*=\s*\{([^}]+)\}", entry, re.IGNORECASE)
-        year_str = year_match.group(1) if year_match else ""
-
-        if year_str:
-            try:
-                return int(year_str)
-            except ValueError:
-                pass
-        return None
+        return extract_year_from_bibtex_field(entry)
 
     def _extract_bibtex_field(self, entry: str, field_name: str) -> Optional[str]:
         """Extract a field value from BibTeX entry."""
