@@ -3,7 +3,6 @@
 ## CURRENT SPRINT (Defect Resolution & Architecture Alignment)
 
 ### CRITICAL Priority
-- [ ] #91: perf: implement connection pooling for HTTP requests
 - [ ] #92: test: achieve 80% test coverage for core modules
 
 ### HIGH Priority  
@@ -23,6 +22,7 @@
 - [ ] #83: refactor: remove unused _calculate_similarity static method in models.py
 
 ## DOING (Current Work)
+- [x] #91: perf: implement connection pooling for HTTP requests (branch: perf-connection-pooling-91)
 
 ## FUTURE SPRINTS
 
