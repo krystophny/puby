@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #60: dead: remove redundant test fixtures
 - [ ] #51: dead: remove unused imports across codebase
 - [ ] #54: dead: remove obsolete configuration constants
 - [ ] #57: dead: remove commented code blocks
@@ -9,6 +8,7 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
+- [x] #60: code duplication: User-Agent header construction repeated in multiple sources (branch: dead-60-user-agent-duplication)
 
 ## DONE (Completed)
 - [x] #58: dead: eliminate duplicate author parsing logic across sources (PR #73)
