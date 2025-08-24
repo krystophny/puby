@@ -7,9 +7,8 @@ from click.testing import CliRunner
 from pyzotero.zotero_errors import UserNotAuthorisedError
 
 from puby.cli import cli
-from puby.legacy_sources import ZoteroLibrary
-from puby.models import ZoteroConfig
 from puby.sources import ZoteroSource
+from puby.models import ZoteroConfig
 
 
 class TestZoteroAPIKeyHonesty:
@@ -59,18 +58,15 @@ class TestZoteroAPIKeyHonesty:
         with pytest.raises(ValueError, match="Failed to auto-discover user ID"):
             ZoteroSource(invalid_config)
 
-    def test_zotero_library_handles_missing_api_key_gracefully(self):
-        """Test that ZoteroLibrary provides clear error for missing API key."""
-        # Test with mock to simulate API key validation failure
-        with patch("puby.zotero_source.zotero.Zotero") as mock_zotero_class:
-            mock_zotero_class.side_effect = Exception(
-                "API key required for private library"
-            )
+    def test_zotero_source_handles_missing_api_key_gracefully(self):
+        """Test that ZoteroSource provides clear error for missing API key."""
+        # Test with invalid config (empty API key)
+        invalid_config = ZoteroConfig(api_key="", group_id="123456", library_type="group")
 
-            with pytest.raises(
-                ValueError, match="Failed to initialize Zotero client.*API key required"
-            ):
-                ZoteroLibrary("123456", api_key=None)
+        with pytest.raises(
+            ValueError, match="Invalid Zotero configuration"
+        ):
+            ZoteroSource(invalid_config)
 
     @patch("puby.zotero_source.zotero.Zotero")
     def test_zotero_source_fetch_unauthorized_error(self, mock_zotero_class):
@@ -256,15 +252,14 @@ class TestErrorMessageClarity:
         """Test that there are no silent failures when auth is missing."""
         # This is a meta-test to ensure we're not hiding auth failures
 
-        # Test with ZoteroLibrary
-        with patch("puby.zotero_source.zotero.Zotero") as mock_zotero_class:
-            mock_zotero_class.side_effect = Exception("API key required")
+        # Test with ZoteroSource (group library with empty API key)
+        invalid_config = ZoteroConfig(api_key="", group_id="123456", library_type="group")
 
-            # Should raise, not silently fail
-            with pytest.raises(ValueError, match="Failed to initialize"):
-                ZoteroLibrary("123456", api_key=None)
+        # Should raise, not silently fail
+        with pytest.raises(ValueError, match="Invalid Zotero configuration"):
+            ZoteroSource(invalid_config)
 
-        # Test with ZoteroSource
+        # Test with ZoteroSource (user library with empty API key)
         invalid_config = ZoteroConfig(api_key="")
 
         # Should raise, not silently fail

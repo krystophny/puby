@@ -237,31 +237,32 @@ class TestCLI:
         assert "Summary:" in result.output  # Summary always shown
 
     @patch("puby.cli.PublicationClient")
-    def test_check_command_source_fetch_error(self, mock_client):
+    @patch("puby.cli.ZoteroSource")
+    def test_check_command_source_fetch_error(self, mock_zotero_source, mock_client):
         """Test check command handles source fetch errors gracefully."""
         mock_client_instance = Mock()
         mock_client.return_value = mock_client_instance
         # Simulate source fetch returning empty list (error handled in client)
         mock_client_instance.fetch_publications.return_value = []
 
-        with patch("puby.cli._initialize_zotero") as mock_init_zotero:
-            mock_zotero_lib = Mock()
-            mock_init_zotero.return_value = mock_zotero_lib
+        # Mock ZoteroSource initialization
+        mock_zotero_instance = Mock()
+        mock_zotero_source.return_value = mock_zotero_instance
 
-            runner = CliRunner()
-            result = runner.invoke(
-                cli,
-                [
-                    "check",
-                    "--orcid",
-                    "https://orcid.org/0000-0000-0000-0000",
-                    "--zotero",
-                    "12345",
-                ],
-            )
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "--orcid",
+                "https://orcid.org/0000-0000-0000-0000",
+                "--zotero",
+                "12345",
+            ],
+        )
 
-            assert result.exit_code == 0  # Should not crash
-            assert "Total publications in sources: 0" in result.output
+        assert result.exit_code == 0  # Should not crash
+        assert "Total publications in sources: 0" in result.output
 
     def test_check_command_zotero_initialization_error(self):
         """Test check command handles Zotero initialization errors."""

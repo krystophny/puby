@@ -10,7 +10,6 @@ from colorama import init as colorama_init
 
 from .client import PublicationClient
 from .env import get_api_key
-from .legacy_sources import ZoteroLibrary
 from .matcher import PublicationMatcher
 from .models import Publication, ZoteroConfig
 from .reporter import ConsoleReporter
@@ -128,15 +127,6 @@ def _initialize_sources(
             sys.exit(1)
 
     return sources
-
-
-def _initialize_zotero(zotero: str, api_key: Optional[str]) -> ZoteroLibrary:
-    """Initialize Zotero library with error handling."""
-    try:
-        return ZoteroLibrary(zotero, api_key=api_key)
-    except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
 
 
 def _initialize_zotero_source(
