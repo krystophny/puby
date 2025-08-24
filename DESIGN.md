@@ -22,10 +22,18 @@ puby/
 ├── __init__.py       # Package initialization and exports
 ├── cli.py           # Command-line interface
 ├── client.py        # Main client coordinating operations
-├── models.py        # Data models (Publication, Author)
-├── sources.py       # Source adapters (ORCID, Scholar, Pure, Zotero)
+├── models.py        # Data models (Publication, Author, ZoteroConfig)
+├── sources.py       # Abstract base class for publication sources
+├── orcid_source.py  # ORCID API implementation
+├── scholar_source.py # Google Scholar scraper
+├── pure_source.py   # Pure portal integration (API + HTML fallback)
+├── zotero_source.py # Modern Zotero source with user/group support
+├── legacy_sources.py # Legacy Zotero implementation
 ├── matcher.py       # Publication matching algorithms
-└── reporter.py      # Output formatting and reporting
+├── reporter.py      # Output formatting and reporting
+├── bibtex_parser.py # BibTeX parsing utilities
+├── env.py          # Environment variable support
+└── base.py         # Base utilities and common functionality
 ```
 
 ### Core Components
@@ -47,16 +55,26 @@ Abstract base class `PublicationSource` with implementations:
   - Direct API access, no authentication required for public data
   - Parses work summaries and detailed work data
   
-- **ScholarSource**: Google Scholar integration
-  - Currently placeholder (scraping challenges)
-  - Future: scholarly library integration
+- **ScholarSource**: Google Scholar profile scraping
+  - Web scraping with rate limiting
+  - Robust parsing of publication lists with pagination
+  - User-Agent rotation and anti-blocking measures
   
-- **PureSource**: Institutional Pure portals
-  - Institution-specific implementation required
+- **PureSource**: Pure research portals with API fallback
+  - Primary: REST API access for structured data
+  - Fallback: HTML scraping when API unavailable
+  - Support for multiple Pure portal configurations
   
-- **ZoteroLibrary**: Zotero library access
-  - Uses pyzotero for API interaction
-  - Supports both public and private libraries
+- **ZoteroSource**: Modern Zotero integration
+  - User and group library support
+  - Automatic user ID discovery from API key
+  - "My Publications" endpoint for authored works
+  - Multiple output formats (JSON, BibTeX)
+  - Connection validation and error handling
+  
+- **ZoteroLibrary**: Legacy Zotero implementation (deprecated)
+  - Maintained for backward compatibility
+  - Basic pyzotero wrapper
 
 #### 3. Matching Engine (`matcher.py`)
 
@@ -77,10 +95,13 @@ Abstract base class `PublicationSource` with implementations:
 #### 5. Reporting (`reporter.py`)
 
 - Multiple output formats:
-  - Table (human-readable)
+  - Table (human-readable with colors)
   - JSON (machine-readable)
   - CSV (spreadsheet-compatible)
   - BibTeX (reference manager import)
+- Analysis reporting with statistics
+- Sync recommendations
+- Missing publication export functionality
 
 ## Data Flow
 
@@ -93,19 +114,38 @@ Abstract base class `PublicationSource` with implementations:
 
 ## API Integration
 
-### ORCID API
+### ORCID API v3.0
 
 - Base URL: `https://pub.orcid.org/v3.0`
-- No authentication required for public data
-- Endpoints used:
-  - `/{orcid-id}/works`: List of works
+- Public access (no authentication required)
+- Endpoints:
+  - `/{orcid-id}/works`: Work summaries list
   - `/{orcid-id}/work/{put-code}`: Detailed work data
+- Rate limiting: 12 requests per second
+- Comprehensive error handling for API failures
 
-### Zotero API
+### Zotero Web API
 
-- Uses pyzotero library for abstraction
-- Supports API key authentication
-- Fetches all items with `everything(top())`
+- User libraries: Auto-discovery via `/users/current` with API key
+- Group libraries: Direct access via group ID
+- My Publications: `/users/{user-id}/publications` (authored works)
+- Formats: JSON (structured) and BibTeX (direct export)
+- Connection validation before data fetching
+- Proper error handling for authentication failures
+
+### Google Scholar
+
+- Web scraping with respectful rate limiting (2-second delays)
+- Profile URL parsing: `citations?user={id}`
+- Pagination support via `start` parameter
+- Anti-blocking: User-Agent rotation and delay patterns
+
+### Pure Research Portals
+
+- Primary: REST API at `/ws/api/persons/{id}/research-outputs`
+- Fallback: HTML scraping with JSON-LD metadata extraction
+- Institution-specific URL pattern recognition
+- Rate limiting: 3-second delays for institutional servers
 
 ## Matching Algorithm
 
@@ -139,18 +179,23 @@ Abstract base class `PublicationSource` with implementations:
 - Invalid input: Validation at CLI level
 - Missing data: Optional fields handled gracefully
 
-## Performance Considerations
+## Performance
 
-- Asynchronous fetching: Future optimization for multiple sources
-- Caching: Potential for local caching of API responses
-- Batch processing: Handle large publication lists efficiently
+- **Rate Limiting**: Source-specific delays to prevent API throttling
+- **Efficient Matching**: DOI-based exact matching before expensive similarity calculations
+- **Pagination Support**: Handle large publication lists across all sources
+- **Memory Efficient**: Stream processing for large datasets
+- **Fast Similarity**: Optimized Jaccard coefficient for title matching
+- **Connection Validation**: Early failure detection to avoid unnecessary processing
 
-## Security
+## Security and Configuration
 
-- No credentials stored locally
-- API keys passed as command-line arguments or environment variables
-- HTTPS enforced for all API communications
-- No sensitive data logging
+- **No Local Storage**: API keys never cached or stored locally
+- **Multi-tier Configuration**: Command line > environment > .env file
+- **HTTPS Enforcement**: All API communications use secure protocols
+- **API Key Validation**: Early validation with clear error messages
+- **No Silent Failures**: All authentication errors reported with remediation steps
+- **Honest Implementation**: No fake functionality when API keys missing
 
 ## Testing Strategy
 
@@ -159,19 +204,20 @@ Abstract base class `PublicationSource` with implementations:
 - Mock responses for reliable testing
 - CLI command testing with Click's testing utilities
 
-## Current Implementation Status
+## Implementation Features
 
-### Completed Features ✅
-- CLI argument parsing with comprehensive help
-- ORCID API integration and publication fetching
-- Zotero API integration (public and private libraries)
-- Google Scholar profile scraping
-- Pure research portal support (API and HTML fallback)
-- Publication matching algorithms with configurable thresholds
-- Multiple output formats (table, JSON, CSV, BibTeX)
-- Duplicate detection within libraries
-- Missing publication identification
-- Cross-platform colored console output
+### Core Functionality ✅
+- **CLI Interface**: Comprehensive argument parsing with help documentation
+- **ORCID Integration**: Full API v3.0 implementation with work details
+- **Google Scholar**: Profile scraping with pagination and rate limiting
+- **Pure Portals**: API-first approach with HTML fallback support
+- **Zotero Libraries**: User/group libraries, auto-discovery, My Publications endpoint
+- **Publication Matching**: DOI-based exact matching plus fuzzy title matching
+- **Output Formats**: Table, JSON, CSV, BibTeX with colored console output
+- **BibTeX Export**: Missing publications export with citation key conflict resolution
+- **Environment Support**: .env file support for API key management
+- **Error Handling**: Honest API key validation with actionable error messages
+- **Testing**: 229 comprehensive tests covering all components
 
 ## Development Workflow
 
