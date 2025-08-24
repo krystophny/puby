@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #55: dead: remove redundant SourceError class hierarchy
 - [ ] #56: dead: remove duplicate author parsing functions
 - [ ] #58: dead: remove duplicate progress tracking implementations
 - [ ] #60: dead: remove redundant test fixtures
@@ -12,6 +11,7 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
+- [x] #55: dead: remove redundant SourceError class hierarchy (branch: dead-55-redundant-source-error-hierarchy)
 
 ## DONE (Completed)
 - [x] #52: dead: remove duplicate fuzzy matching implementations (PR #70)
