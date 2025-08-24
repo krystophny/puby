@@ -18,6 +18,6 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
-- [x] #62: bug: uncaught exception in Scholar source with empty search results (branch: bug-62-scholar-empty-results)
 
 ## DONE (Completed)
+- [x] #62: bug: uncaught exception in Scholar source with empty search results (branch: bug-62-scholar-empty-results)
