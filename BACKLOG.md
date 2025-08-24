@@ -1,9 +1,9 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #63: bug: hardcoded timeout value in HTTP client
-- [ ] #64: bug: missing validation for environment variable values
-- [ ] #65: bug: incomplete error handling in JSON parsing
+- [ ] #63: bug: file permission check happens after expensive API calls
+- [ ] #64: bug: fetch command doesn't validate output filename before API calls
+- [ ] #65: bug: URL validation is case-sensitive, should accept uppercase domains
 - [ ] #50: dead: remove legacy `fetch_publications` method
 - [ ] #53: dead: remove unused private methods in sources module
 - [ ] #52: dead: remove duplicate fuzzy matching implementations
