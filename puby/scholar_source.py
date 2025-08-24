@@ -265,14 +265,10 @@ class ScholarSource(PublicationSource):
         year = None
 
         # Try to extract year first (4-digit number)
-        year_match = re.search(r"\b(19|20)\d{2}\b", pub_info)
-        if year_match:
-            try:
-                year = int(year_match.group())
-                # Remove year from string for further processing
-                pub_info = pub_info.replace(year_match.group(), "").strip()
-            except ValueError:
-                pass
+        year = extract_year_from_text(pub_info)
+        if year:
+            # Remove year from string for further processing
+            pub_info = pub_info.replace(str(year), "").strip()
 
         # Remove common page/volume patterns to clean up journal name
         # Patterns: "15 (4), 123-130" or "400, 109001" or similar

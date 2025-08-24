@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 
 from .base import PublicationSource
 from .models import Author, Publication
+from .utils import extract_year_from_text
 
 
 class PureSource(PublicationSource):
@@ -267,10 +268,9 @@ class PureSource(PublicationSource):
 
         # Extract year from various patterns
         text = container.get_text()
-        year_match = re.search(r"\b(19|20)\d{2}\b", text)
-        if year_match:
-            with contextlib.suppress(ValueError):
-                details["year"] = int(year_match.group())
+        year = extract_year_from_text(text)
+        if year:
+            details["year"] = year
 
         # Look for journal/venue information
         venue_selectors = [
