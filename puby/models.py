@@ -11,6 +11,10 @@ from .constants import (
     ZOTERO_API_KEY_REQUIRED_ERROR,
     ZOTERO_API_KEY_INVALID_FORMAT_ERROR,
 )
+from .similarity_utils import (
+    calculate_enhanced_title_similarity,
+    calculate_simple_similarity,
+)
 
 
 @dataclass
@@ -345,7 +349,7 @@ class Publication:
     def _calculate_fuzzy_similarity(self, title1: str, title2: str) -> float:
         """Calculate enhanced fuzzy similarity between two normalized titles.
 
-        Uses word overlap with substring matching for longer titles.
+        Uses shared similarity calculation from similarity_utils module.
 
         Args:
             title1: First normalized title
@@ -354,78 +358,15 @@ class Publication:
         Returns:
             float: Similarity score (0.0-1.0)
         """
-        if not title1 or not title2:
-            return 0.0
-
-        # Split into words
-        words1 = set(title1.split())
-        words2 = set(title2.split())
-
-        if not words1 or not words2:
-            return 0.0
-
-        # Calculate basic Jaccard similarity (word overlap)
-        intersection = len(words1 & words2)
-        union = len(words1 | words2)
-        jaccard_score = intersection / union if union > 0 else 0.0
-
-        # Enhanced similarity for longer titles (>15 chars)
-        # Check both substring containment and word-level containment
-        if len(title1) > 15 or len(title2) > 15:
-            # Method 1: Direct substring containment
-            shorter, longer = (
-                (title1, title2) if len(title1) <= len(title2) else (title2, title1)
-            )
-
-            if shorter in longer:
-                # Very high similarity if one title contains the other
-                containment_score = len(shorter) / len(longer)
-                enhanced_containment = min(
-                    1.0, containment_score + 0.2
-                )  # Add flat bonus
-                return max(jaccard_score, enhanced_containment)
-
-            # Method 2: Check if all words from shorter title are in longer
-            shorter_words, longer_words = (
-                (words1, words2) if len(words1) <= len(words2) else (words2, words1)
-            )
-
-            if shorter_words.issubset(longer_words):
-                # All words from shorter title are in longer title
-                # Strong boost for perfect word subset cases
-                word_containment_score = len(shorter_words) / len(longer_words)
-                enhanced_score = min(
-                    1.0, word_containment_score + 0.4
-                )  # Add flat bonus
-                return max(jaccard_score, enhanced_score)
-
-        # For similar-length titles, boost Jaccard score if intersection is significant
-        if intersection >= 2 and intersection / min(len(words1), len(words2)) >= 0.5:
-            # Boost score when at least 2 words match and 50%+ of smaller set matches
-            boost_factor = 1.2 if intersection >= 3 else 1.1
-            return min(1.0, jaccard_score * boost_factor)
-
-        return jaccard_score
+        return calculate_enhanced_title_similarity(title1, title2)
 
     @staticmethod
     def _calculate_similarity(s1: str, s2: str) -> float:
-        """Calculate simple similarity between two strings."""
-        # Simple character-based similarity
-        if not s1 or not s2:
-            return 0.0
-
-        # Normalize strings
-        s1_words = set(s1.lower().split())
-        s2_words = set(s2.lower().split())
-
-        if not s1_words or not s2_words:
-            return 0.0
-
-        # Jaccard similarity
-        intersection = len(s1_words & s2_words)
-        union = len(s1_words | s2_words)
-
-        return intersection / union if union > 0 else 0.0
+        """Calculate simple similarity between two strings.
+        
+        Uses shared similarity calculation from similarity_utils module.
+        """
+        return calculate_simple_similarity(s1, s2)
 
     def is_valid(self) -> bool:
         """Check if publication data is valid."""

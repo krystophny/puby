@@ -5,6 +5,11 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from .models import Author, Publication
+from .similarity_utils import (
+    calculate_author_set_similarity,
+    calculate_title_similarity_with_length_penalty,
+    normalize_text,
+)
 
 
 @dataclass
@@ -221,45 +226,26 @@ class PublicationMatcher:
         return doi.lower().strip()
 
     def _normalize_text(self, text: str) -> str:
-        """Normalize text for comparison."""
-        # Remove punctuation, extra spaces, convert to lowercase
-        normalized = re.sub(r"[^\w\s]", " ", text.lower())
-        normalized = re.sub(r"\s+", " ", normalized).strip()
-        return normalized
+        """Normalize text for comparison.
+        
+        Uses shared normalization from similarity_utils module.
+        """
+        return normalize_text(text)
 
     def _calculate_title_similarity(self, title1: str, title2: str) -> float:
-        """Calculate title similarity with advanced normalization."""
-        if not title1 or not title2:
-            return 0.0
-
-        # Normalize titles
-        norm1 = self._normalize_text(title1)
-        norm2 = self._normalize_text(title2)
-
-        if norm1 == norm2:
-            return 1.0
-
-        # Word-based Jaccard similarity
-        words1 = set(norm1.split())
-        words2 = set(norm2.split())
-
-        if not words1 or not words2:
-            return 0.0
-
-        intersection = len(words1 & words2)
-        union = len(words1 | words2)
-
-        jaccard = intersection / union if union > 0 else 0.0
-
-        # Penalty for different lengths (more strict)
-        len_ratio = min(len(words1), len(words2)) / max(len(words1), len(words2))
-
-        return jaccard * len_ratio
+        """Calculate title similarity with advanced normalization.
+        
+        Uses shared similarity calculation from similarity_utils module.
+        """
+        return calculate_title_similarity_with_length_penalty(title1, title2)
 
     def _calculate_author_similarity(
         self, authors1: List[Author], authors2: List[Author]
     ) -> float:
-        """Calculate author similarity with name variation handling."""
+        """Calculate author similarity with name variation handling.
+        
+        Uses shared similarity calculation from similarity_utils module.
+        """
         if not authors1 or not authors2:
             return 0.0
 
@@ -267,11 +253,7 @@ class PublicationMatcher:
         names1 = {self._normalize_author_name(author) for author in authors1}
         names2 = {self._normalize_author_name(author) for author in authors2}
 
-        # Calculate Jaccard similarity
-        intersection = len(names1 & names2)
-        union = len(names1 | names2)
-
-        return intersection / union if union > 0 else 0.0
+        return calculate_author_set_similarity(names1, names2)
 
     def _normalize_author_name(self, author: Author) -> str:
         """Normalize author name for comparison."""
