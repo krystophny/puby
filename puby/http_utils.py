@@ -1,7 +1,11 @@
-"""HTTP utilities for consistent header handling across sources."""
+"""HTTP utilities for consistent header handling and session management across sources."""
 
 import random
 from typing import Dict
+
+import requests
+
+from .http_session import get_shared_session
 
 
 # Common User-Agent strings for different platforms
@@ -42,3 +46,23 @@ def get_headers_with_random_user_agent() -> Dict[str, str]:
         headers["User-Agent"] = random.choice(USER_AGENTS)
     
     return headers
+
+
+def get_session_for_url(url: str) -> requests.Session:
+    """Get a shared session configured for the specified URL.
+    
+    This function provides a session with connection pooling enabled,
+    which dramatically improves performance for multiple requests to
+    the same domain.
+    
+    Args:
+        url: The URL to get a session for
+        
+    Returns:
+        Configured requests.Session with connection pooling
+        
+    Example:
+        >>> session = get_session_for_url('https://api.example.com/data')
+        >>> response = session.get('https://api.example.com/users')
+    """
+    return get_shared_session(url)

@@ -12,6 +12,7 @@ from .bibtex_parser import BibtexParser
 from .constants import ZOTERO_API_KEY_URL, ZOTERO_API_KEY_INVALID_ERROR
 from .models import Author, Publication, ZoteroConfig
 from .author_utils import create_structured_author, create_fallback_author
+from .http_utils import get_session_for_url
 
 
 class ZoteroSource(PublicationSource):
@@ -25,6 +26,7 @@ class ZoteroSource(PublicationSource):
 
         self.config = config
         self.logger = logging.getLogger(__name__)
+        self._session = get_session_for_url("https://api.zotero.org")
 
         # Initialize Zotero API client
         try:
@@ -105,7 +107,7 @@ class ZoteroSource(PublicationSource):
         headers = {"Zotero-API-Key": api_key, "Accept": "application/json"}
 
         try:
-            response = requests.get(url, headers=headers)
+            response = self._session.get(url, headers=headers)
             response.raise_for_status()
             data = response.json()
 
@@ -272,7 +274,7 @@ class ZoteroSource(PublicationSource):
         url = f"https://api.zotero.org/users/{user_id}/publications/items"
         headers, params = self._build_my_publications_request(start, limit)
 
-        response = requests.get(url, headers=headers, params=params)
+        response = self._session.get(url, headers=headers, params=params)
         self._validate_my_publications_response(response)
 
         return self._parse_my_publications_response(response)

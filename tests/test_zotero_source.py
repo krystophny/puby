@@ -54,9 +54,8 @@ class TestZoteroSource:
 
         mock_zotero.assert_called_once_with("67890", "user", "abcdef1234567890abcdef34")
 
-    @patch("puby.zotero_source.requests.get")
     @patch("puby.zotero_source.zotero.Zotero")
-    def test_zotero_user_id_autodiscovery_success(self, mock_zotero, mock_get):
+    def test_zotero_user_id_autodiscovery_success(self, mock_zotero):
         """Test successful user ID auto-discovery from API key."""
         # Mock the /keys/current endpoint response
         mock_response = Mock()
@@ -67,20 +66,27 @@ class TestZoteroSource:
             "username": "testuser",
             "access": {"user": {"library": True, "notes": True, "write": True}},
         }
-        mock_get.return_value = mock_response
-
+        
         # Create config without user ID
         config = ZoteroConfig(api_key="abcdef1234567890abcdef12", library_type="user")
-        ZoteroSource(config)
-
-        # Verify the auto-discovery was performed
-        mock_get.assert_called_once_with(
-            "https://api.zotero.org/keys/current",
-            headers={
-                "Zotero-API-Key": "abcdef1234567890abcdef12",
-                "Accept": "application/json",
-            },
-        )
+        
+        # Create config without user ID
+        mock_session = Mock()
+        mock_session.get.return_value = mock_response
+        
+        with patch.object(ZoteroSource, 'validate_connection'):
+            # Patch the get_session_for_url to return our mock session
+            with patch('puby.zotero_source.get_session_for_url', return_value=mock_session):
+                source = ZoteroSource(config)
+                
+                # Verify the auto-discovery was performed
+                mock_session.get.assert_called_once_with(
+                    "https://api.zotero.org/keys/current",
+                    headers={
+                        "Zotero-API-Key": "abcdef1234567890abcdef12",
+                        "Accept": "application/json",
+                    },
+                )
 
         # Verify Zotero client was initialized with discovered user ID
         mock_zotero.assert_called_once_with(
