@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #65: bug: URL validation is case-sensitive, should accept uppercase domains
 - [ ] #50: dead: remove legacy `fetch_publications` method
 - [ ] #53: dead: remove unused private methods in sources module
 - [ ] #52: dead: remove duplicate fuzzy matching implementations
@@ -16,6 +15,7 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
+- [x] #65: bug: URL validation is case-sensitive, should accept uppercase domains (branch: bug-65-case-insensitive-urls)
 
 ## DONE (Completed)
 - [x] #64: bug: fetch command doesn't validate output filename before API calls (resolved by PR #67)
