@@ -3,7 +3,6 @@
 ## CURRENT SPRINT (Defect Resolution & Architecture Alignment)
 
 ### CRITICAL Priority
-- [ ] #92: test: achieve 80% test coverage for core modules
 
 ### HIGH Priority  
 - [ ] #82: Tool continues processing when ORCID source fails with 404
@@ -22,7 +21,7 @@
 - [ ] #83: refactor: remove unused _calculate_similarity static method in models.py
 
 ## DOING (Current Work)
-- [x] #91: perf: implement connection pooling for HTTP requests (branch: perf-connection-pooling-91)
+- [ ] #92: test: achieve 80% test coverage for core modules (branch: test-coverage-80-92)
 
 ## FUTURE SPRINTS
 
@@ -37,3 +36,4 @@
 - Key decisions: Single source of truth for architecture docs
 
 ## DONE (Completed)
+- [x] #91: perf: implement connection pooling for HTTP requests
