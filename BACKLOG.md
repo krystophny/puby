@@ -5,7 +5,6 @@
 ### CRITICAL Priority
 
 ### HIGH Priority  
-- [ ] #82: Tool continues processing when ORCID source fails with 404
 - [ ] #90: refactor: split large modules to meet 500-line target
 - [ ] #93: infra: add CI/CD pipeline and development tooling
 
@@ -21,7 +20,7 @@
 - [ ] #83: refactor: remove unused _calculate_similarity static method in models.py
 
 ## DOING (Current Work)
-- [ ] #92: test: achieve 80% test coverage for core modules (branch: test-coverage-80-92)
+- [ ] #82: Tool continues processing when ORCID source fails with 404
 
 ## FUTURE SPRINTS
 
@@ -37,3 +36,4 @@
 
 ## DONE (Completed)
 - [x] #91: perf: implement connection pooling for HTTP requests
+- [x] #92: test: achieve 80% test coverage for core modules
