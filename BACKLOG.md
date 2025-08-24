@@ -5,9 +5,9 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
-- [x] #57: dead: remove unused ORCIDConfig class (branch: dead-57-orcidconfig-removal)
 
 ## DONE (Completed)
+- [x] #57: dead: remove unused ORCIDConfig class (PR #76)
 - [x] #54: dead: remove unused load_api_keys export in __init__.py (PR #75)
 - [x] #51: dead: remove unused _initialize_zotero function in cli.py (already resolved in previous cleanup)
 - [x] #60: code duplication: User-Agent header construction repeated in multiple sources (PR #74)
