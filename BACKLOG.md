@@ -3,9 +3,9 @@
 ## TODO (Ordered by Priority)
 
 ## DOING (Current Work)
-- [x] #61: meta: dead code removal summary and verification (branch: meta-61-dead-code-summary)
 
 ## DONE (Completed)
+- [x] #61: meta: dead code removal summary and verification (completed)
 - [x] #59: fix fetch command misleading documentation (PR #77)
 - [x] #57: dead: remove unused ORCIDConfig class (PR #76)
 - [x] #54: dead: remove unused load_api_keys export in __init__.py (PR #75)
