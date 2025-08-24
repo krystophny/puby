@@ -4,7 +4,6 @@ __version__ = "0.1.0"
 
 from .client import PublicationClient
 from .env import get_api_key, load_api_keys
-from .legacy_sources import ZoteroLibrary
 from .matcher import PublicationMatcher
 from .models import Author, Publication
 from .sources import ORCIDSource, PureSource, ScholarSource
@@ -17,7 +16,6 @@ __all__ = [
     "PublicationMatcher",
     "PureSource",
     "ScholarSource",
-    "ZoteroLibrary",
     "get_api_key",
     "load_api_keys",
 ]

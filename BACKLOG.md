@@ -1,7 +1,6 @@
 # Development Backlog
 
 ## TODO (Ordered by Priority)
-- [ ] #50: dead: remove legacy `fetch_publications` method
 - [ ] #53: dead: remove unused private methods in sources module
 - [ ] #52: dead: remove duplicate fuzzy matching implementations
 - [ ] #55: dead: remove redundant SourceError class hierarchy
@@ -17,6 +16,7 @@
 ## DOING (Current Work)
 
 ## DONE (Completed)
+- [x] #50: dead: remove legacy ZoteroLibrary class and unused imports (PR #69)
 - [x] #65: bug: URL validation is case-sensitive, should accept uppercase domains (PR #68)
 - [x] #64: bug: fetch command doesn't validate output filename before API calls (resolved by PR #67)
 - [x] #63: bug: file permission check happens after expensive API calls (branch: bug-63-file-permission-check-timing)
