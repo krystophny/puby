@@ -7,9 +7,9 @@
 - [ ] #61: meta: dead code removal summary and verification
 
 ## DOING (Current Work)
-- [x] #51: dead: remove unused _initialize_zotero function in cli.py (branch: dead-51-unused-initialize-zotero)
 
 ## DONE (Completed)
+- [x] #51: dead: remove unused _initialize_zotero function in cli.py (already resolved in previous cleanup)
 - [x] #60: code duplication: User-Agent header construction repeated in multiple sources (PR #74)
 - [x] #58: dead: eliminate duplicate author parsing logic across sources (PR #73)
 - [x] #56: dead: eliminate duplicate similarity calculation methods (PR #72)
